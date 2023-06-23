@@ -1,0 +1,9 @@
+helpers.c:15:13:float_to_char	4
+helpers.c:32:5:float2char	3
+helpers.c:56:5:my_itoa	9
+helpers.c:92:7:strtoke	4
+helpers.c:110:7:atofLR	9
+helpers.c:149:6:altAtol	9
+helpers.c:190:6:coorsAtol	11
+helpers.c:236:10:extractLong	1
+helpers.c:245:10:extractInt	1

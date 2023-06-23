@@ -1,0 +1,11 @@
+../Core/Src/lsm6_gyro.c:21:6:tick_gyro	16	static
+../Core/Src/lsm6_gyro.c:30:9:lsm6_bus_init	8	static
+../Core/Src/lsm6_gyro.c:71:9:whoIam_lsm6	32	static
+../Core/Src/lsm6_gyro.c:81:9:whoIam_lis3	32	static
+../Core/Src/lsm6_gyro.c:91:19:gyro_init	32	static
+../Core/Src/lsm6_gyro.c:98:19:lsm6_acc_init	32	static
+../Core/Src/lsm6_gyro.c:105:19:magn_init	32	static
+../Core/Src/lsm6_gyro.c:121:19:gyro_read	56	static
+../Core/Src/lsm6_gyro.c:153:19:lsm6_acc_read	48	static
+../Core/Src/lsm6_gyro.c:174:19:lis3_magn_read	48	static
+../Core/Src/lsm6_gyro.c:196:6:debugPrintMEMS	40	static
