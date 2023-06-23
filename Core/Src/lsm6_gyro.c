@@ -187,42 +187,42 @@ HAL_StatusTypeDef lis3_magn_read(mems_data_t *mems_data){
     magn_x = ((int16_t)((x_h << 8) | x_l));
     magn_y = ((int16_t)((y_h << 8) | y_l));
     magn_z = ((int16_t)((z_h << 8) | z_l));
-    mems_data->magn_x = magn_x / 4.0f;
-    mems_data->magn_y = magn_y / 4.0f;
-    mems_data->magn_z = magn_z / 4.0f;
+    mems_data->magn_x = magn_x / 10.0f;
+    mems_data->magn_y = magn_y / 10.0f;
+    mems_data->magn_z = magn_z / 10.0f;
     return res;
 }
 
 void debugPrintMEMS(mems_data_t *mems_data){
 	uint8_t text[20] = {0};
-	uart_write_debug("Raw:", 50);
-	memcpy(text,0,10);
-	sprintf(text, "%f,", mems_data->acc_x);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
-	sprintf(text, "%f,", mems_data->acc_y);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
-	sprintf(text, "%f,", mems_data->acc_z);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
-	sprintf(text, "%f,", mems_data->gyro_x);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
-	sprintf(text, "%f,", mems_data->gyro_y);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
-	sprintf(text, "%f,", mems_data->gyro_z);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
+//	uart_write_debug("Raw:", 50);
+//	memcpy(text,0,10);
+//	sprintf(text, "%f,", mems_data->acc_x);
+//	uart_write_debug(text, 50);
+//	memcpy(text,0,10);
+//	sprintf(text, "%f,", mems_data->acc_y);
+//	uart_write_debug(text, 50);
+//	memcpy(text,0,10);
+//	sprintf(text, "%f,", mems_data->acc_z);
+//	uart_write_debug(text, 50);
+//	memcpy(text,0,10);
+//	sprintf(text, "%f,", mems_data->gyro_x);
+//	uart_write_debug(text, 50);
+//	memcpy(text,0,10);
+//	sprintf(text, "%f,", mems_data->gyro_y);
+//	uart_write_debug(text, 50);
+//	memcpy(text,0,10);
+//	sprintf(text, "%f,", mems_data->gyro_z);
+//	uart_write_debug(text, 50);
+//	memcpy(text,0,10);
 	sprintf(text, "%f,", mems_data->magn_x);
-	uart_write_debug(text, 50);
+	uart_write_uart4(text, 50);
 	memcpy(text,0,10);
 	sprintf(text, "%f,", mems_data->magn_y);
-	uart_write_debug(text, 50);
+	uart_write_uart4(text, 50);
 	memcpy(text,0,10);
 	sprintf(text, "%f\r\n", mems_data->magn_z);
-	uart_write_debug(text, 50);
+	uart_write_uart4(text, 50);
 	memcpy(text,0,10);
 }
 

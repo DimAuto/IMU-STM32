@@ -123,7 +123,10 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+
   MX_USART1_UART_Init();
+
+  MX_UART4_UART_Init();
 
 
   if (lsm6_bus_init() != 0){
@@ -244,7 +247,7 @@ void printOutTask(void *argument)
 		status = osMessageQueueGet(outputQueueHandle, &euler, NULL, 0U);   // wait for message
 		if (status == osOK) {
 			sprintf(text, "\n%f\r", euler.angle.yaw);
-			uart_write_debug(text,50);
+			uart_write_uart4(text,50);
 			memset(text,0,sizeof(text));
 		}
 		osDelay(100);
