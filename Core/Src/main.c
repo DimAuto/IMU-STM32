@@ -126,7 +126,7 @@ int main(void)
 
   MX_USART1_UART_Init();
 
-  MX_UART4_UART_Init();
+  MX_UART4_Init();
 
 
   if (lsm6_bus_init() != 0){
@@ -180,12 +180,7 @@ int main(void)
 }
 
 
-
-/* USER CODE BEGIN 4 */
-
-/* USER CODE END 4 */
-
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* CODE BEGIN Header_StartDefaultTask */
 /**
   * @brief  Function implementing the defaultTask thread.
   * @param  argument: Not used
@@ -230,7 +225,7 @@ void readMemsTask(void *argument)
 	{
 		tick_gyro(&mems_data);
 		osMessageQueuePut(memsQueueHandle, &mems_data, 0U, 0U);
-		osDelay(100);
+		osDelay(50);
 	}
 }
 

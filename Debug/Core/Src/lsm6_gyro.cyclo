@@ -6,6 +6,6 @@ lsm6_gyro.c:91:19:gyro_init	1
 lsm6_gyro.c:98:19:lsm6_acc_init	1
 lsm6_gyro.c:105:19:magn_init	4
 lsm6_gyro.c:121:19:gyro_read	1
-lsm6_gyro.c:153:19:lsm6_acc_read	1
-lsm6_gyro.c:174:19:lis3_magn_read	1
-lsm6_gyro.c:196:6:debugPrintMEMS	1
+lsm6_gyro.c:140:19:lsm6_acc_read	1
+lsm6_gyro.c:154:19:lis3_magn_read	1
+lsm6_gyro.c:169:6:debugPrintMEMS	1

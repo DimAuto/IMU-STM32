@@ -30,13 +30,6 @@ void tick_gyro(mems_data_t * mems_data){
 uint8_t lsm6_bus_init(void)
 {
 
-  /* USER CODE BEGIN I2C2_Init 0 */
-
-  /* USER CODE END I2C2_Init 0 */
-
-  /* USER CODE BEGIN I2C2_Init 1 */
-
-  /* USER CODE END I2C2_Init 1 */
   hi2c2.Instance = I2C2;
   hi2c2.Init.Timing = 0x00B03FDB;
   hi2c2.Init.OwnAddress1 = 0;
@@ -119,74 +112,47 @@ HAL_StatusTypeDef magn_init(void){
 }
 
 HAL_StatusTypeDef gyro_read(mems_data_t *mems_data){
-	uint8_t x_l, x_h = 0;
-	uint8_t y_l, y_h = 0;
-	uint8_t z_l, z_h = 0;
-	uint8_t tm0,tm1,tm2,tm3;
+	uint8_t data[6]={0};
+	uint8_t ts_data[4]={0};
 	int16_t gyro_x, gyro_y, gyro_z;
 	HAL_StatusTypeDef res = HAL_OK;
-    HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTX_L_G, 1, &x_l, 1, 30);
-    HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTX_H_G, 1, &x_h, 1, 30);
-    HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTY_L_G, 1, &y_l, 1, 30);
-    HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTY_H_G, 1, &y_h, 1, 30);
-    HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTZ_L_G, 1, &z_l, 1, 30);
-    HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTZ_H_G, 1, &z_h, 1, 30);
+    HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTX_L_G, I2C_MEMADD_SIZE_8BIT, data, 6, 50);
     /*Timestamp Read*/
-    HAL_I2C_Mem_Read(&hi2c2, LSM6, TIMESTAMP0, 1, &tm0, 1, 30);
-    HAL_I2C_Mem_Read(&hi2c2, LSM6, TIMESTAMP1, 1, &tm1, 1, 30);
-    HAL_I2C_Mem_Read(&hi2c2, LSM6, TIMESTAMP2, 1, &tm2, 1, 30);
-    HAL_I2C_Mem_Read(&hi2c2, LSM6, TIMESTAMP3, 1, &tm3, 1, 30);
+    HAL_I2C_Mem_Read(&hi2c2, LSM6, TIMESTAMP0, I2C_MEMADD_SIZE_8BIT, ts_data, 4, 50);
 
-    HAL_I2C_Mem_Read(&hi2c2, LSM6, TIMESTAMP3, 1, &tm3, 1, 30);
-
-
-    gyro_x = ((int16_t)((x_h << 8) | x_l));
-    gyro_y = ((int16_t)((y_h << 8) | y_l));
-    gyro_z = ((int16_t)((z_h << 8) | z_l));
-    mems_data->gyro_x = (gyro_x / 131.1);// * -1.0f;
-    mems_data->gyro_y = (gyro_y / 131.1);// * -1.0f;
-    mems_data->gyro_z = (gyro_z / 131.1) * -1.0f;
-    mems_data->timestamp = ((int)((tm3<<24)|(tm2<<16)|(tm1<<8)|(tm0)));
+    gyro_x = ((int16_t)((data[1] << 8) | data[0]));
+    gyro_y = ((int16_t)((data[3] << 8) | data[2]));
+    gyro_z = ((int16_t)((data[5] << 8) | data[4]));
+    mems_data->gyro_x = (gyro_x / 131.1f);// * -1.0f;
+    mems_data->gyro_y = (gyro_y / 131.1f);// * -1.0f;
+    mems_data->gyro_z = (gyro_z / 131.1f);// * -1.0f;
+    mems_data->timestamp = ((int)((ts_data[3]<<24)|(ts_data[2]<<16)|(ts_data[1]<<8)|(ts_data[0])));
     return res;
 }
 
 HAL_StatusTypeDef lsm6_acc_read(mems_data_t *mems_data){
-	uint8_t x_l, x_h = 0;
-	uint8_t y_l, y_h = 0;
-	uint8_t z_l, z_h = 0;
+	uint8_t data[6] = {0};
 	int16_t acc_x, acc_y, acc_z;
 	HAL_StatusTypeDef res = HAL_OK;
-	HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTX_L_A, 1, &x_l, 1, 30);
-	HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTX_H_A, 1, &x_h, 1, 30);
-	HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTY_L_A, 1, &y_l, 1, 30);
-	HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTY_H_A, 1, &y_h, 1, 30);
-	HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTZ_L_A, 1, &z_l, 1, 30);
-	HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTZ_H_A, 1, &z_h, 1, 30);
-    acc_x = ((int16_t)((x_h << 8) | x_l));
-    acc_y = ((int16_t)((y_h << 8) | y_l));
-    acc_z = ((int16_t)((z_h << 8) | z_l));
+	HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTX_L_A, I2C_MEMADD_SIZE_8BIT, data, 6, 50);
+    acc_x = ((int16_t)((data[1] << 8) | data[0]));
+    acc_y = ((int16_t)((data[3] << 8) | data[2]));
+    acc_z = ((int16_t)((data[5] << 8) | data[4]));
     mems_data->acc_x = (acc_x / 16384.0f);//  * -1.0f;
     mems_data->acc_y = (acc_y / 16384.0f);// * -1.0f;
-    mems_data->acc_z = (acc_z / 16384.0f) * -1.0f;
+    mems_data->acc_z = (acc_z / 16384.0f);// * -1.0f;
     return res;
 }
 
 HAL_StatusTypeDef lis3_magn_read(mems_data_t *mems_data){
-    uint8_t x_l, x_h = 0;
-    uint8_t y_l, y_h = 0;
-    uint8_t z_l, z_h = 0;
+	uint8_t data[6] = {0};
     int16_t magn_x, magn_y, magn_z;
     HAL_StatusTypeDef res = HAL_OK;
 
-    HAL_I2C_Mem_Read(&hi2c2, LIS3_MAGN, OUT_X_L_MG, 1, &x_l, 1, 30);
-    HAL_I2C_Mem_Read(&hi2c2, LIS3_MAGN, OUT_X_H_MG, 1, &x_h, 1, 30);
-    HAL_I2C_Mem_Read(&hi2c2, LIS3_MAGN, OUT_Y_L_MG, 1, &y_l, 1, 30);
-    HAL_I2C_Mem_Read(&hi2c2, LIS3_MAGN, OUT_Y_H_MG, 1, &y_h, 1, 30);
-    HAL_I2C_Mem_Read(&hi2c2, LIS3_MAGN, OUT_Z_L_MG, 1, &z_l, 1, 30);
-    HAL_I2C_Mem_Read(&hi2c2, LIS3_MAGN, OUT_Z_H_MG, 1, &z_h, 1, 30);
-    magn_x = ((int16_t)((x_h << 8) | x_l));
-    magn_y = ((int16_t)((y_h << 8) | y_l));
-    magn_z = ((int16_t)((z_h << 8) | z_l));
+    HAL_I2C_Mem_Read(&hi2c2, LIS3_MAGN, OUT_X_L_MG, I2C_MEMADD_SIZE_8BIT, data, 6, 50);
+    magn_x = ((int16_t)((data[1] << 8) | data[0]));
+    magn_y = ((int16_t)((data[3] << 8) | data[2]));
+    magn_z = ((int16_t)((data[5] << 8) | data[4]));
     mems_data->magn_x = magn_x / 10.0f;
     mems_data->magn_y = magn_y / 10.0f;
     mems_data->magn_z = magn_z / 10.0f;
@@ -195,7 +161,10 @@ HAL_StatusTypeDef lis3_magn_read(mems_data_t *mems_data){
 
 void debugPrintMEMS(mems_data_t *mems_data){
 	uint8_t text[20] = {0};
-//	uart_write_debug("Raw:", 50);
+//	uart_write_uart4("TS:", 50);
+//	memcpy(text,0,10);
+//	sprintf(text, "%d-,", mems_data->timestamp);
+//	uart_write_debug(text, 50);
 //	memcpy(text,0,10);
 //	sprintf(text, "%f,", mems_data->acc_x);
 //	uart_write_debug(text, 50);
@@ -216,13 +185,13 @@ void debugPrintMEMS(mems_data_t *mems_data){
 //	uart_write_debug(text, 50);
 //	memcpy(text,0,10);
 	sprintf(text, "%f,", mems_data->magn_x);
-	uart_write_uart4(text, 50);
+	uart_write_debug(text, 50);
 	memcpy(text,0,10);
 	sprintf(text, "%f,", mems_data->magn_y);
-	uart_write_uart4(text, 50);
+	uart_write_debug(text, 50);
 	memcpy(text,0,10);
 	sprintf(text, "%f\r\n", mems_data->magn_z);
-	uart_write_uart4(text, 50);
+	uart_write_debug(text, 50);
 	memcpy(text,0,10);
 }
 

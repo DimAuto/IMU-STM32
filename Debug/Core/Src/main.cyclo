@@ -1,9 +1,9 @@
 main.c:102:5:main	5
-main.c:195:6:StartDefaultTask	1
-main.c:208:6:calcHeadingTask	2
-main.c:226:6:readMemsTask	1
-main.c:238:6:printOutTask	2
-main.c:266:6:SystemClock_Config	4
-main.c:317:13:MX_GPIO_Init	1
-main.c:522:6:HAL_TIM_PeriodElapsedCallback	2
-main.c:539:6:Error_Handler	1
+main.c:190:6:StartDefaultTask	1
+main.c:203:6:calcHeadingTask	2
+main.c:221:6:readMemsTask	1
+main.c:233:6:printOutTask	2
+main.c:261:6:SystemClock_Config	4
+main.c:312:13:MX_GPIO_Init	1
+main.c:517:6:HAL_TIM_PeriodElapsedCallback	2
+main.c:534:6:Error_Handler	1

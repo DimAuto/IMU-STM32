@@ -51,7 +51,7 @@ void MX_USART1_UART_Init(void)
 
 }
 
-void MX_UART4_UART_Init(void)
+void MX_UART4_Init(void)
 {
 
   huart4.Instance = UART4;
