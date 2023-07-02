@@ -10,13 +10,19 @@
 
 #include "stm32l4xx_hal.h"
 
+typedef enum{
+	UART_DEBUG,
+	UART_NYX,
+	UART_IRIS
+}UART_select;
+
 void MX_USART1_UART_Init(void);
 
 void MX_UART4_Init(void);
 
 HAL_StatusTypeDef uart_write_debug(uint8_t *pData, uint32_t Timeout);
 
-HAL_StatusTypeDef uart_write_uart4(uint8_t *pData, uint32_t Timeout);
+HAL_StatusTypeDef uart_write_uart(uint8_t *pData, UART_select device, uint32_t Timeout);
 
 
 

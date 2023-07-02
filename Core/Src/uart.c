@@ -99,10 +99,22 @@ HAL_StatusTypeDef uart_write_debug(uint8_t *pData, uint32_t Timeout){
 	return HAL_UART_Transmit(&huart1,pData,strlen(pData),Timeout);// Sending in normal mode
 }
 
-HAL_StatusTypeDef uart_write_uart4(uint8_t *pData, uint32_t Timeout){
+HAL_StatusTypeDef uart_write_uart(uint8_t *pData, UART_select device, uint32_t Timeout){
 	uint8_t i=0;
 	uint8_t *temp;
-	return HAL_UART_Transmit(&huart4,pData,strlen(pData),Timeout);// Sending in normal mode
+	UART_HandleTypeDef *huart;
+	switch(device){
+		case UART_DEBUG:
+			huart = &huart1;
+			break;
+		case UART_NYX:
+//			huart = &huart2;
+			break;
+		case UART_IRIS:
+			huart = &huart4;
+			break;
+	}
+	return HAL_UART_Transmit(huart, pData,strlen(pData),Timeout);// Sending in normal mode
 }
 
 

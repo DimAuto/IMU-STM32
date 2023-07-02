@@ -6,13 +6,8 @@
  */
 
 #include "gps_neoM9N.h"
-#include "core/i2c.h"
-#include "core/uart.h"
-#include "config.h"
-#include "core/timer.h"
 #include <string.h>
-#include "core/helpers.h"
-#include "message_handler.h"
+
 
 static void calcChecksum(messageCFG_t *msg);
 

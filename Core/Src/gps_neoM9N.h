@@ -8,11 +8,8 @@
 #ifndef SRC_GPS_NEOM9N_H_
 #define SRC_GPS_NEOM9N_H_
 
-#include <msp430.h>
-#include <stdint.h>
-#include "config.h"
 #include "time.h"
-#include "core/uart.h"
+#include "uart.h"
 
 #define UBX_SYNCH_1     0xb5
 #define UBX_SYNCH_2     0x62
