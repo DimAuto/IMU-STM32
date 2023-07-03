@@ -122,7 +122,7 @@ uint8_t ubloxRead(void){
     num  = ((bytes[0] << 8) | bytes[1]);
     memset(bytes, 0, 2);
     if (num > 0){
-    	if (num>75)num=75;
+    	if (num>140)num=140;
         res = HAL_I2C_Mem_Read(&hi2c1, UBLOX_M9N, 0xFF, I2C_MEMADD_SIZE_8BIT, gps_data.sentence, num, 100);
         if ((res != HAL_OK) || (gps_data.sentence[0] != '$')){
                 return 10;

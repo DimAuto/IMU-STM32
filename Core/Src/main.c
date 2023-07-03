@@ -63,14 +63,19 @@ const osThreadAttr_t readMemsTask_attributes = {
 
 const osThreadAttr_t getCoorsTask_attributes = {
   .name = "getCoors",
-  .stack_size = 128 * 16,
-  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 8,
+  .priority = (osPriority_t) osPriorityLow,
 };
 
 /* Definitions for myMutex01 */
 osMutexId_t debugUartMutex;
 const osMutexAttr_t uartMutex_attributes = {
   .name = "debugUartMutex"
+};
+
+osMutexId_t i2cMutex;
+const osMutexAttr_t i2cMutex_attributes = {
+  .name = "i2cMutex"
 };
 
 /* Definitions for memsQueue */
@@ -175,6 +180,8 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_MUTEX */
   debugUartMutex = osMutexNew(&uartMutex_attributes);
+
+  i2cMutex = osMutexNew(&i2cMutex_attributes);
   /* USER CODE END RTOS_MUTEX */
 
   memsQueueHandle = osMessageQueueNew (4, sizeof(mems_data_t), &memsQueue_attributes);
@@ -247,7 +254,9 @@ void readMemsTask(void *argument)
 	mems_data_t mems_data;
 	for(;;)
 	{
+		osMutexAcquire(i2cMutex, osWaitForever);
 		tick_gyro(&mems_data);
+		osMutexRelease(i2cMutex);
 		osMessageQueuePut(memsQueueHandle, &mems_data, 0U, 0U);
 		osDelay(50);
 	}
@@ -280,8 +289,10 @@ void getCoorsTask(void *argument){
 
 	for(;;)
 	{
+		osMutexAcquire(i2cMutex, osWaitForever);
 		osMutexAcquire(debugUartMutex, osWaitForever);
 		ublox_tick();
+		osMutexRelease(i2cMutex);
 		osMutexRelease(debugUartMutex);
 		osDelay(1700);
 	}
