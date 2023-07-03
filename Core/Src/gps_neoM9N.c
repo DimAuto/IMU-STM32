@@ -6,15 +6,13 @@
  */
 
 #include "gps_neoM9N.h"
-#include "core/i2c.h"
-#include "core/uart.h"
-#include "config.h"
-#include "core/timer.h"
+#include <stdio.h>
 #include <string.h>
-#include "core/helpers.h"
-#include "message_handler.h"
 
 static void calcChecksum(messageCFG_t *msg);
+
+// I2C object
+I2C_HandleTypeDef hi2c1;
 
 //gps_data_t *gps_data;
 static messageCFG_t config_message = {UBX_SYNCH_2, 0, 0, 0, 0, 0, 1, 0, 0, SFE_UBLOX_PACKET_VALIDITY_NOT_DEFINED, SFE_UBLOX_PACKET_VALIDITY_NOT_DEFINED};
@@ -24,14 +22,44 @@ static uint8_t gps_loss_count = 0;
 uint8_t gps_data_backup_flag = 0;   //Flag to enable gps data backup only on boot.
 
 
+uint8_t ublox_i2c_bus_init(void){
+	hi2c1.Instance = I2C1;
+	hi2c1.Init.Timing = 0x00B03FDB;
+	hi2c1.Init.OwnAddress1 = 0;
+	hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+	hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+	hi2c1.Init.OwnAddress2 = 0;
+	hi2c1.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+	hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+	hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+	if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+	{
+	return 1;
+	}
+
+	/** Configure Analogue filter
+	*/
+	if (HAL_I2CEx_ConfigAnalogFilter(&hi2c1, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
+	{
+	return 2;
+	}
+
+	/** Configure Digital filter
+	*/
+	if (HAL_I2CEx_ConfigDigitalFilter(&hi2c1, 0) != HAL_OK)
+	{
+	return 3;
+	}
+	return 0;
+}
+
+
 void ublox_tick(void){
     uint8_t res = 0;
-//    uint8_t *data;
     res = ubloxRead();
-//    data = malloc(76 * sizeof(uint8_t));
     if ((res == 8) || (res==10)){
 #ifdef __DEBUG__
-        uart_write_DEBUG("Failed to read\r\n",UART_NYX);
+        uart_write_debug("Failed to read\r\n",UART_NYX);
 #endif
         return;
     }
@@ -40,61 +68,69 @@ void ublox_tick(void){
     }
 }
 
-void ublox_transmit_rtc(uint8_t cmd, UART_select device){
-    transmitMessage(gps_data.timestamp, 9, cmd, device);
+//void ublox_transmit_rtc(uint8_t cmd, UART_select device){
+//    transmitMessage(gps_data.timestamp, 9, cmd, device);
+//}
+//
+//void ublox_transmit_message(uint8_t cmd, UART_select device){
+//    uint8_t message[12] = {0};
+//    message[0] = (gps_data.latitude & 0xFF000000) >> 24;
+//    message[1] = (gps_data.latitude & 0x00FF0000) >> 16;
+//    message[2] = (gps_data.latitude & 0x0000FF00) >> 8;
+//    message[3] = (gps_data.latitude & 0x000000FF);
+//    message[4] = (gps_data.longtitude & 0xFF000000) >> 24;
+//    message[5] = (gps_data.longtitude & 0x00FF0000) >> 16;
+//    message[6] = (gps_data.longtitude & 0x0000FF00) >> 8;
+//    message[7] = (gps_data.longtitude & 0x000000FF);
+//    message[8] = (gps_data.altitude & 0xFF000000) >> 24;
+//    message[9] = (gps_data.altitude & 0x00FF0000) >> 16;
+//    message[10] = (gps_data.altitude & 0x0000FF00) >> 8;
+//    message[11] = (gps_data.altitude & 0x000000FF);
+//    transmitMessage(message, 12, cmd, device);
+//}
+
+HAL_StatusTypeDef ubloxInit(void){
+	HAL_StatusTypeDef ret=0x00;
+    ret = setPortOutput(COM_PORT_I2C, COM_TYPE_NMEA);
+    if (ret != HAL_OK)return ret;
+    ret = configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GLL, NMEA_GGL_RATE, COM_PORT_I2C);
+    if (ret != HAL_OK)return ret;
+    ret = configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GSA, NMEA_GSA_RATE, COM_PORT_I2C);
+    if (ret != HAL_OK)return ret;
+    ret = configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GSV, NMEA_GSV_RATE, COM_PORT_I2C);
+    if (ret != HAL_OK)return ret;
+    ret = configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_RMC, NMEA_RMC_RATE, COM_PORT_I2C);
+    if (ret != HAL_OK)return ret;
+    ret = configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_VTG, NMEA_VTG_RATE, COM_PORT_I2C);
+    if (ret != HAL_OK)return ret;
+    ret = configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GGA, NMEA_GGA_RATE, COM_PORT_I2C);
+    if (ret != HAL_OK)return ret;
 }
 
-void ublox_transmit_message(uint8_t cmd, UART_select device){
-    uint8_t message[12] = {0};
-    message[0] = (gps_data.latitude & 0xFF000000) >> 24;
-    message[1] = (gps_data.latitude & 0x00FF0000) >> 16;
-    message[2] = (gps_data.latitude & 0x0000FF00) >> 8;
-    message[3] = (gps_data.latitude & 0x000000FF);
-    message[4] = (gps_data.longtitude & 0xFF000000) >> 24;
-    message[5] = (gps_data.longtitude & 0x00FF0000) >> 16;
-    message[6] = (gps_data.longtitude & 0x0000FF00) >> 8;
-    message[7] = (gps_data.longtitude & 0x000000FF);
-    message[8] = (gps_data.altitude & 0xFF000000) >> 24;
-    message[9] = (gps_data.altitude & 0x00FF0000) >> 16;
-    message[10] = (gps_data.altitude & 0x0000FF00) >> 8;
-    message[11] = (gps_data.altitude & 0x000000FF);
-    transmitMessage(message, 12, cmd, device);
-}
-
-uint8_t ubloxInit(void){
-    setPortOutput(COM_PORT_I2C, COM_TYPE_NMEA);
-    configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GLL, NMEA_GGL_RATE, COM_PORT_I2C);
-    configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GSA, NMEA_GSA_RATE, COM_PORT_I2C);
-    configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GSV, NMEA_GSV_RATE, COM_PORT_I2C);
-    configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_RMC, NMEA_RMC_RATE, COM_PORT_I2C);
-    configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_VTG, NMEA_VTG_RATE, COM_PORT_I2C);
-    configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GGA, NMEA_GGA_RATE, COM_PORT_I2C);
-//    return saveConfiguration();
-    return 0;
-}
-
-void ubloxNmeaGGA_set_refresh_rate(uint8_t seconds){
-    configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GGA, seconds, COM_PORT_I2C);
+HAL_StatusTypeDef ubloxNmeaGGA_set_refresh_rate(uint8_t seconds){
+    return configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GGA, seconds, COM_PORT_I2C);
 }
 
 uint8_t ubloxRead(void){
     uint8_t res = 0;
+
     uint16_t num = 0;
     uint8_t bytes[2] = {0};
 
-    res = I2C_Master_ReadReg(UBLOX_M9N, 0xFD, 2, bytes, I2C_SEL_GPS);
-    if (res!=0)return res;
+    res = HAL_I2C_Mem_Read(&hi2c1, UBLOX_M9N, 0xFD, I2C_MEMADD_SIZE_8BIT, bytes, 2, 20);
+    if (res!=HAL_OK)return res;
     num  = ((bytes[0] << 8) | bytes[1]);
     memset(bytes, 0, 2);
     if (num > 0){
-        res = I2C_Master_ReadReg(UBLOX_M9N, 0xFF, num, gps_data.sentence, I2C_SEL_GPS);
-        if (gps_data.sentence[0] != '$'){
+    	if (num>75)num=75;
+        res = HAL_I2C_Mem_Read(&hi2c1, UBLOX_M9N, 0xFF, I2C_MEMADD_SIZE_8BIT, gps_data.sentence, num, 100);
+        if ((res != HAL_OK) || (gps_data.sentence[0] != '$')){
                 return 10;
         }
-#ifdef __DEBUG__
-    uart_write_DEBUG(gps_data.sentence,UART_NYX);
-    uart_write_DEBUG("\r\n",UART_NYX);
-#endif
+//#ifdef __DEBUG__
+        uart_write_debug(gps_data.sentence, 50);
+        uart_write_debug("\r\n", 10);
+//#endif
         return res;
     }
     return 10;
@@ -193,23 +229,25 @@ static void calcChecksum(messageCFG_t *msg){
     }
 }
 
-uint8_t sendI2Cmessage(uint8_t msg_len){
-    uint8_t message[30] = {0};
-    message[0] = UBX_SYNCH_2;
-    message[1] = config_message.cls;
-    message[2] = config_message.id;
-    message[3] = (config_message.len & 0xFF);
-    message[4] = (config_message.len >> 8);
+HAL_StatusTypeDef sendI2Cmessage(void){
+    uint8_t message[40] = {0};
+    uint8_t len = config_message.len + 8;
+    message[0] = UBX_SYNCH_1;
+    message[1] = UBX_SYNCH_2;
+    message[2] = config_message.cls;
+    message[3] = config_message.id;
+    message[4] = (config_message.len & 0xFF);
+    message[5] = (config_message.len >> 8);
     uint8_t i;
     for ( i=0 ; i < config_message.len ; i++){
-        message[5+i] = config_message.payload[i];
+        message[6+i] = config_message.payload[i];
     }
-    message[5+i] = config_message.checksumA;
-    message[6+i] = config_message.checksumB;
-    return I2C_Master_WriteReg(UBLOX_M9N, UBX_SYNCH_1, message, msg_len, I2C_SEL_GPS);
+    message[6+i] = config_message.checksumA;
+    message[7+i] = config_message.checksumB;
+    return HAL_I2C_Master_Transmit(&hi2c1, UBLOX_M9N, message, len, 50);
 }
 
-uint8_t setPortOutput(uint8_t portSelect, uint8_t streamSettings){
+HAL_StatusTypeDef setPortOutput(uint8_t portSelect, uint8_t streamSettings){
     config_message.cls = UBX_CLASS_CFG;
     config_message.id =  UBX_CFG_PRT;
     config_message.len = 20;
@@ -219,10 +257,10 @@ uint8_t setPortOutput(uint8_t portSelect, uint8_t streamSettings){
     payloadCfg[14] = streamSettings;
     config_message.payload = payloadCfg;
     calcChecksum(&config_message);
-    return sendI2Cmessage(config_message.len + 7);
+    return sendI2Cmessage();
 }
 
-uint8_t ubloxSaveConfiguration(void){
+HAL_StatusTypeDef ubloxSaveConfiguration(void){
     config_message.cls = UBX_CLASS_CFG;
     config_message.id =  UBX_CFG_CFG;
     config_message.len = 12;
@@ -231,10 +269,10 @@ uint8_t ubloxSaveConfiguration(void){
     payloadCfg[5] = 0xFF;
     config_message.payload = payloadCfg;
     calcChecksum(&config_message);
-    return sendI2Cmessage(config_message.len + 7);
+    return sendI2Cmessage();
 }
 
-uint8_t ubloxLoadConfiguration(void){
+HAL_StatusTypeDef ubloxLoadConfiguration(void){
     config_message.cls = UBX_CLASS_CFG;
     config_message.id =  UBX_CFG_CFG;
     config_message.len = 12;
@@ -243,10 +281,10 @@ uint8_t ubloxLoadConfiguration(void){
     payloadCfg[9] = 0xFF;
     config_message.payload = payloadCfg;
     calcChecksum(&config_message);
-    return sendI2Cmessage(config_message.len + 7);
+    return sendI2Cmessage();
 }
 
-uint8_t ubloxResetConfiguration(void){
+HAL_StatusTypeDef ubloxResetConfiguration(void){
     config_message.cls = UBX_CLASS_CFG;
     config_message.id =  UBX_CFG_CFG;
     config_message.len = 12;
@@ -257,10 +295,10 @@ uint8_t ubloxResetConfiguration(void){
     payloadCfg[9] = 0xFF;
     config_message.payload = payloadCfg;
     calcChecksum(&config_message);
-    return sendI2Cmessage(config_message.len + 7);
+    return sendI2Cmessage();
 }
 
-uint8_t getPortSettings(uint8_t portID, uint8_t *rx_mes){
+HAL_StatusTypeDef getPortSettings(uint8_t portID, uint8_t *rx_mes){
     config_message.cls = UBX_CLASS_CFG;
     config_message.id = UBX_CFG_PRT;
     config_message.len = 1;
@@ -268,19 +306,20 @@ uint8_t getPortSettings(uint8_t portID, uint8_t *rx_mes){
     payloadCfg[0] = portID;
     config_message.payload = payloadCfg;
     calcChecksum(&config_message);
-    uint8_t message[30] = {0};
-    message[0] = UBX_SYNCH_2;
-    message[1] = config_message.cls;
-    message[2] = config_message.id;
-    message[3] = (config_message.len & 0xFF);
-    message[4] = (config_message.len >> 8);
-    message[5] = payloadCfg[0];
-    message[6] = config_message.checksumA;
-    message[7] = config_message.checksumB;
-    return I2C_Master_WriteMessUblox(UBLOX_M9N, UBX_SYNCH_1, message, rx_mes, 8, 28, I2C_SEL_GPS);
+    uint8_t message[10] = {0};
+    message[0] = UBX_SYNCH_1;
+    message[1] = UBX_SYNCH_2;
+    message[2] = config_message.cls;
+    message[3] = config_message.id;
+    message[4] = (config_message.len & 0xFF);
+    message[5] = (config_message.len >> 8);
+    message[6] = payloadCfg[0];
+    message[7] = config_message.checksumA;
+    message[8] = config_message.checksumB;
+    return UbloxI2CWriteReadPolling(UBLOX_M9N, message, 10, rx_mes, 11, 100);
 }
 
-uint8_t getMessageSettings(uint8_t msgClass, uint8_t msgID, uint8_t *rx_mes){
+HAL_StatusTypeDef getMessageSettings(uint8_t msgClass, uint8_t msgID, uint8_t *rx_mes){
     config_message.cls = UBX_CLASS_CFG;
     config_message.id = UBX_CFG_MSG;
     config_message.len = 2;
@@ -289,20 +328,21 @@ uint8_t getMessageSettings(uint8_t msgClass, uint8_t msgID, uint8_t *rx_mes){
     payloadCfg[1] = msgID;
     config_message.payload = payloadCfg;
     calcChecksum(&config_message);
-    uint8_t message[30] = {0};
-    message[0] = UBX_SYNCH_2;
-    message[1] = config_message.cls;
-    message[2] = config_message.id;
-    message[3] = (config_message.len & 0xFF);
-    message[4] = (config_message.len >> 8);
-    message[5] = payloadCfg[0];
-    message[6] = payloadCfg[1];
-    message[7] = config_message.checksumA;
-    message[8] = config_message.checksumB;
-    return I2C_Master_WriteMessUblox(UBLOX_M9N, UBX_SYNCH_1, message, rx_mes, 9, 11, I2C_SEL_GPS);
+    uint8_t message[10] = {0};
+    message[0] = UBX_SYNCH_1;
+    message[1] = UBX_SYNCH_2;
+    message[2] = config_message.cls;
+    message[3] = config_message.id;
+    message[4] = (config_message.len & 0xFF);
+    message[5] = (config_message.len >> 8);
+    message[6] = payloadCfg[0];
+    message[7] = payloadCfg[1];
+    message[8] = config_message.checksumA;
+    message[9] = config_message.checksumB;
+    return UbloxI2CWriteReadPolling(UBLOX_M9N, message, 10, rx_mes, 11, 100);
 }
 
-uint8_t configureNMEA(uint8_t msgClass, uint8_t msgID, uint8_t rate, uint8_t portID){
+HAL_StatusTypeDef configureNMEA(uint8_t msgClass, uint8_t msgID, uint8_t rate, uint8_t portID){
     config_message.cls = UBX_CLASS_CFG;
     config_message.id = UBX_CFG_MSG;
     config_message.len = 8;
@@ -312,10 +352,10 @@ uint8_t configureNMEA(uint8_t msgClass, uint8_t msgID, uint8_t rate, uint8_t por
     payloadCfg[2] = rate;
     config_message.payload = payloadCfg;
     calcChecksum(&config_message);
-    return sendI2Cmessage(config_message.len + 7);
+    return sendI2Cmessage();
 }
 
-uint8_t powerOffWithInterrupt(uint32_t durationInMs, uint32_t wakeupSources){
+HAL_StatusTypeDef powerOffWithInterrupt(uint32_t durationInMs, uint32_t wakeupSources){
     config_message.cls = UBX_CLASS_RXM;
     config_message.id = UBX_RXM_PMREQ;
     config_message.len = 16;
@@ -339,11 +379,11 @@ uint8_t powerOffWithInterrupt(uint32_t durationInMs, uint32_t wakeupSources){
     payloadCfg[15] = (wakeupSources >> (8 * 3)) & 0xff;
     config_message.payload = payloadCfg;
     calcChecksum(&config_message);
-    return sendI2Cmessage(config_message.len + 7);
+    return sendI2Cmessage();
 
 }
 
-uint8_t setPowerSaveMode(uint8_t mode){
+HAL_StatusTypeDef setPowerSaveMode(uint8_t mode){
     config_message.cls = UBX_CLASS_CFG;
     config_message.id = UBX_CFG_RXM;
     config_message.len = 2;
@@ -352,30 +392,31 @@ uint8_t setPowerSaveMode(uint8_t mode){
     payloadCfg[1] = mode;
     config_message.payload = payloadCfg;
     calcChecksum(&config_message);
-    return sendI2Cmessage(config_message.len + 7);
+    return sendI2Cmessage();
 }
 
-uint8_t powerModeGet(void){
+HAL_StatusTypeDef powerModeGet(void){
     uint8_t res = 0;
     uint8_t data[10] = {0};
     config_message.cls = UBX_CLASS_CFG;
     config_message.id = UBX_CFG_RXM;
     config_message.len = 0;
-    uint8_t message[8] = {0};
-    message[0] = UBX_SYNCH_2;
-    message[1] = config_message.cls;
-    message[2] = config_message.id;
-    message[3] = (config_message.len & 0xFF);
-    message[4] = (config_message.len >> 8);
-    message[5] = config_message.checksumA;
-    message[6] = config_message.checksumB;
-    res = I2C_Master_WriteMessUblox(UBLOX_M9N, UBX_SYNCH_1, message, data, 7, 9, I2C_SEL_GPS);
-    if (res == 8)return res;
+    uint8_t message[10] = {0};
+    message[0] = UBX_SYNCH_1;
+    message[1] = UBX_SYNCH_2;
+    message[2] = config_message.cls;
+    message[3] = config_message.id;
+    message[4] = (config_message.len & 0xFF);
+    message[5] = (config_message.len >> 8);
+    message[6] = config_message.checksumA;
+    message[7] = config_message.checksumB;
+    res = UbloxI2CWriteReadPolling(UBLOX_M9N, message, 8, data, 9, 100);
+    if (res != HAL_OK)return res;
     return data[1];
 }
 
 
-uint8_t createBackup(void){
+HAL_StatusTypeDef createBackup(void){
     config_message.cls = UBX_CLASS_UPD;
     config_message.id = 0x14;
     config_message.len = 4;
@@ -383,10 +424,10 @@ uint8_t createBackup(void){
     payloadCfg[0] = 0;
     config_message.payload = payloadCfg;
     calcChecksum(&config_message);
-    return sendI2Cmessage(config_message.len + 7);
+    return sendI2Cmessage();
 }
 
-uint8_t restoreBackupData(void){
+HAL_StatusTypeDef restoreBackupData(void){
     config_message.cls = UBX_CLASS_UPD;
     config_message.id = 0x14;
     config_message.len = 0;
@@ -394,10 +435,10 @@ uint8_t restoreBackupData(void){
     payloadCfg[1] = 0;
     config_message.payload = payloadCfg;
     calcChecksum(&config_message);
-    return sendI2Cmessage(config_message.len + 7);
+    return sendI2Cmessage();
 }
 
-uint8_t resetReceiver(uint16_t startSelect, uint8_t start_stop){
+HAL_StatusTypeDef resetReceiver(uint16_t startSelect, uint8_t start_stop){
     config_message.cls = UBX_CLASS_CFG;
     config_message.id = UBX_CFG_RST;
     config_message.len = 4;
@@ -408,7 +449,7 @@ uint8_t resetReceiver(uint16_t startSelect, uint8_t start_stop){
     payloadCfg[4] = 0;
     config_message.payload = payloadCfg;
     calcChecksum(&config_message);
-    return sendI2Cmessage(config_message.len + 7);
+    return sendI2Cmessage();
 }
 
 void init_gps_data(void){
@@ -424,5 +465,23 @@ void init_gps_data(void){
     memset(gps_data.sep, 0, 6);
     memset(gps_data.timestamp, 0, 9);
 }
+
+
+HAL_StatusTypeDef UbloxI2CWriteReadPolling(uint16_t DevAddress, uint8_t *TData, uint16_t TDataLen,
+										uint8_t *RData, uint16_t RDataLen, uint32_t Timeout)
+{
+	HAL_StatusTypeDef ret = 0x00;
+
+	ret = HAL_I2C_Master_Transmit(&hi2c1, DevAddress, TData, TDataLen, Timeout);
+	if ( ret != HAL_OK ) {
+	  return (0x10 | ret);
+	}
+	else {
+		// Read Response
+		ret = HAL_I2C_Master_Receive(&hi2c1, DevAddress, RData, RDataLen, Timeout);
+		return (0x20 |ret);
+	}
+}
+
 
 

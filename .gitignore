@@ -1,0 +1,16 @@
+
+.cproject
+
+.mxproject
+
+.project
+
+stm32_devboard_RTOS Debug.launch
+
+stm32_devboard_RTOS.ioc
+
+STM32L4S5VITX_FLASH.ld
+
+STM32L4S5VITX_RAM.ld
+
+.settings/

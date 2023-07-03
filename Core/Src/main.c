@@ -20,6 +20,7 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "lsm6_gyro.h"
+#include "gps_neoM9N.h"
 #include "uart.h"
 #include "Fusion/Fusion.h"
 
@@ -29,6 +30,7 @@ osThreadId_t defaultTaskHandle;
 osThreadId_t calcHeadingTaskHandle;
 osThreadId_t readMemsTaskHandle;
 osThreadId_t printOutTaskHandle;
+osThreadId_t getCoorsTaskHandle;
 
 osSemaphoreId_t binSemHandle;
 const osSemaphoreAttr_t binSem_attributes = {
@@ -59,10 +61,16 @@ const osThreadAttr_t readMemsTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 
+const osThreadAttr_t getCoorsTask_attributes = {
+  .name = "getCoors",
+  .stack_size = 128 * 16,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
 /* Definitions for myMutex01 */
-osMutexId_t myMutex01Handle;
-const osMutexAttr_t myMutex01_attributes = {
-  .name = "myMutex01"
+osMutexId_t debugUartMutex;
+const osMutexAttr_t uartMutex_attributes = {
+  .name = "debugUartMutex"
 };
 
 /* Definitions for memsQueue */
@@ -85,6 +93,7 @@ void StartDefaultTask(void *argument);
 void calcHeadingTask(void *argument);
 void readMemsTask(void *argument);
 void printOutTask(void *argument);
+void getCoorsTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -147,12 +156,25 @@ int main(void)
 			  uart_write_debug(Test, 10);
 		  }
   }
+  if (ublox_i2c_bus_init() != HAL_OK){
+	  uart_write_debug("Failed to Initialize ublox bus\r\n", 10);
+  }
+  else{
+	  HAL_StatusTypeDef res;
+	  res = ubloxInit();
+	  if (res != HAL_OK){
+		  uart_write_debug("Failed to Initialize UBLOX\r\n", 10);
+	  }
+	  else{
+		  uart_write_debug("Ublox Initialized!\r\n", 10);
+	  }
+  }
 
   /* Init scheduler */
   osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
-  myMutex01Handle = osMutexNew(&myMutex01_attributes);
+  debugUartMutex = osMutexNew(&uartMutex_attributes);
   /* USER CODE END RTOS_MUTEX */
 
   memsQueueHandle = osMessageQueueNew (4, sizeof(mems_data_t), &memsQueue_attributes);
@@ -166,7 +188,9 @@ int main(void)
 
   calcHeadingTaskHandle = osThreadNew(calcHeadingTask, NULL, &calcHeadingTask_attributes);
 
-//  printOutTaskHandle = osThreadNew(printOutTask, NULL, &printOutTask_attributes);
+  printOutTaskHandle = osThreadNew(printOutTask, NULL, &printOutTask_attributes);
+
+  getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
 
   /* Start scheduler */
   osKernelStart();
@@ -242,10 +266,24 @@ void printOutTask(void *argument)
 		status = osMessageQueueGet(outputQueueHandle, &euler, NULL, 0U);   // wait for message
 		if (status == osOK) {
 			sprintf(text, "\n%f\r", euler.angle.yaw);
-			uart_write_uart4(text,50);
+			osMutexAcquire(debugUartMutex, osWaitForever);
+			uart_write_debug(text,50);
+			osMutexRelease(debugUartMutex);
 			memset(text,0,sizeof(text));
 		}
 		osDelay(100);
+	}
+}
+
+
+void getCoorsTask(void *argument){
+
+	for(;;)
+	{
+		osMutexAcquire(debugUartMutex, osWaitForever);
+		ublox_tick();
+		osMutexRelease(debugUartMutex);
+		osDelay(1700);
 	}
 }
 
@@ -486,13 +524,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : ARD_D15_Pin ARD_D14_Pin */
-  GPIO_InitStruct.Pin = ARD_D15_Pin|ARD_D14_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+//  /*Configure GPIO pins : ARD_D15_Pin ARD_D14_Pin */
+//  GPIO_InitStruct.Pin = ARD_D15_Pin|ARD_D14_Pin;
+//  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+//  GPIO_InitStruct.Pull = GPIO_NOPULL;
+//  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+//  GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
+//  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI9_5_IRQn, 5, 0);

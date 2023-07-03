@@ -22,8 +22,8 @@ void tick_gyro(mems_data_t * mems_data){
     gyro_read(mems_data);
     lsm6_acc_read(mems_data);
     lis3_magn_read(mems_data);
-    osDelay(5);
-    debugPrintMEMS(mems_data);
+//    osDelay(5);
+//    debugPrintMEMS(mems_data);
 }
 
 

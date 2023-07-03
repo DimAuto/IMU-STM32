@@ -3,6 +3,7 @@
 "./Core/Src/Fusion/FusionCompass.o"
 "./Core/Src/Fusion/FusionOffset.o"
 "./Core/Src/freertos.o"
+"./Core/Src/gps_neoM9N.o"
 "./Core/Src/helpers.o"
 "./Core/Src/lsm6_gyro.o"
 "./Core/Src/main.o"
