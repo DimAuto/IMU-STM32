@@ -18,12 +18,14 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
 #include "lsm6_gyro.h"
 #include "gps_neoM9N.h"
 #include "uart.h"
+#include "ring_buffer.h"
 #include "Fusion/Fusion.h"
 
+extern RB_t uart4RXrb;
+extern RB_t uart1RXrb;
 
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -31,6 +33,9 @@ osThreadId_t calcHeadingTaskHandle;
 osThreadId_t readMemsTaskHandle;
 osThreadId_t printOutTaskHandle;
 osThreadId_t getCoorsTaskHandle;
+osThreadId_t readMessageTaskHandle;
+osThreadId_t sendMessageTaskHandle;
+
 
 osSemaphoreId_t binSemHandle;
 const osSemaphoreAttr_t binSem_attributes = {
@@ -67,6 +72,19 @@ const osThreadAttr_t getCoorsTask_attributes = {
   .priority = (osPriority_t) osPriorityLow,
 };
 
+const osThreadAttr_t readMessageTaskHandle_attributes = {
+  .name = "readMessage",
+  .stack_size = 128 * 8,
+  .priority = (osPriority_t) osPriorityHigh,
+};
+
+const osThreadAttr_t sendMessageTaskHandle_attributes = {
+  .name = "sendMessage",
+  .stack_size = 128 * 8,
+  .priority = (osPriority_t) osPriorityHigh,
+};
+
+
 /* Definitions for myMutex01 */
 osMutexId_t debugUartMutex;
 const osMutexAttr_t uartMutex_attributes = {
@@ -89,6 +107,10 @@ const osMessageQueueAttr_t outputQueue_attributes = {
   .name = "outputQueue"
 };
 
+osMessageQueueId_t messageQueueHandle;
+const osMessageQueueAttr_t messageQueue_attributes = {
+  .name = "messageQueue"
+};
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -99,6 +121,8 @@ void calcHeadingTask(void *argument);
 void readMemsTask(void *argument);
 void printOutTask(void *argument);
 void getCoorsTask(void *argument);
+void readMessageTask(void *argument);
+void sendMessageTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -183,10 +207,9 @@ int main(void)
 
   i2cMutex = osMutexNew(&i2cMutex_attributes);
   /* USER CODE END RTOS_MUTEX */
-
   memsQueueHandle = osMessageQueueNew (4, sizeof(mems_data_t), &memsQueue_attributes);
-  /* USER CODE END RTOS_QUEUES */
   outputQueueHandle = osMessageQueueNew (4, sizeof(FusionEuler), &outputQueue_attributes);
+  messageQueueHandle = osMessageQueueNew (8, sizeof(uart4RXrb.buffer), &messageQueue_attributes);
   /* Create the thread(s) */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
@@ -198,6 +221,10 @@ int main(void)
   printOutTaskHandle = osThreadNew(printOutTask, NULL, &printOutTask_attributes);
 
   getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
+
+  sendMessageTaskHandle = osThreadNew(sendMessageTask, NULL, &sendMessageTaskHandle_attributes);
+
+  readMessageTaskHandle = osThreadNew(readMessageTask, NULL, &readMessageTaskHandle_attributes);
 
   /* Start scheduler */
   osKernelStart();
@@ -225,6 +252,7 @@ void StartDefaultTask(void *argument)
   for(;;)
   {
 	HAL_GPIO_TogglePin(GPIOB,LED2_Pin);
+	uart_receive_it(UART_NYX);
     osDelay(500);
   }
   /* USER CODE END 5 */
@@ -240,10 +268,10 @@ void calcHeadingTask(void *argument)
 
 	for(;;)
 	{
-		status = osMessageQueueGet(memsQueueHandle, &mems_data, NULL, 0U);   // wait for message
+		status = osMessageQueueGet(memsQueueHandle, &mems_data, NULL, 2U);   // wait for message
 	    if (status == osOK) {
 	    	FusionCalcHeading(&mems_data, &euler);
-	    	osMessageQueuePut(outputQueueHandle, &euler, 0U, 0U);
+	    	osMessageQueuePut(outputQueueHandle, &euler, 0U, 2U);
 	    }
 		osDelay(10);
 	}
@@ -257,7 +285,7 @@ void readMemsTask(void *argument)
 		osMutexAcquire(i2cMutex, osWaitForever);
 		tick_gyro(&mems_data);
 		osMutexRelease(i2cMutex);
-		osMessageQueuePut(memsQueueHandle, &mems_data, 0U, 0U);
+		osMessageQueuePut(memsQueueHandle, &mems_data, 0U, 2U);
 		osDelay(50);
 	}
 }
@@ -272,7 +300,7 @@ void printOutTask(void *argument)
 
 	for(;;)
 	{
-		status = osMessageQueueGet(outputQueueHandle, &euler, NULL, 0U);   // wait for message
+		status = osMessageQueueGet(outputQueueHandle, &euler, NULL, 2U);   // wait for message
 		if (status == osOK) {
 			sprintf(text, "\n%f\r", euler.angle.yaw);
 			osMutexAcquire(debugUartMutex, osWaitForever);
@@ -298,6 +326,17 @@ void getCoorsTask(void *argument){
 	}
 }
 
+void readMessageTask(void *argument){
+	for(;;){
+		osDelay(500);
+	}
+}
+
+void sendMessageTask(void *argument){
+	for(;;){
+		osDelay(500);
+	}
+}
 
 
 //////////// SYSTEM CONFIG ///////////////////

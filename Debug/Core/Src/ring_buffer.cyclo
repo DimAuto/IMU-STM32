@@ -1,0 +1,11 @@
+ring_buffer.c:16:9:RB_init	2
+ring_buffer.c:30:6:RB_deinit	1
+ring_buffer.c:37:6:RB_push	2
+ring_buffer.c:46:9:RB_pop	2
+ring_buffer.c:55:6:RB_pushFront	3
+ring_buffer.c:66:9:RB_popBack	3
+ring_buffer.c:73:9:RB_capacity	1
+ring_buffer.c:75:9:RB_size	1
+ring_buffer.c:79:9:RB_isEmpty	1
+ring_buffer.c:81:9:RB_isFull	1
+ring_buffer.c:85:6:RB_clear	1

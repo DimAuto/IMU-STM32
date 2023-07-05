@@ -42,10 +42,10 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/cmsis_os2.h \
  ../Core/Src/lsm6_gyro.h ../Core/Src/gps_neoM9N.h ../Core/Src/uart.h \
- ../Core/Src/Fusion/Fusion.h ../Core/Src/Fusion/../lsm6_gyro.h \
- ../Core/Src/Fusion/FusionAhrs.h ../Core/Src/Fusion/FusionConvention.h \
- ../Core/Src/Fusion/FusionMath.h ../Core/Src/Fusion/FusionAxes.h \
- ../Core/Src/Fusion/FusionCalibration.h \
+ ../Core/Src/ring_buffer.h ../Core/Src/Fusion/Fusion.h \
+ ../Core/Src/Fusion/../lsm6_gyro.h ../Core/Src/Fusion/FusionAhrs.h \
+ ../Core/Src/Fusion/FusionConvention.h ../Core/Src/Fusion/FusionMath.h \
+ ../Core/Src/Fusion/FusionAxes.h ../Core/Src/Fusion/FusionCalibration.h \
  ../Core/Src/Fusion/FusionCompass.h ../Core/Src/Fusion/FusionOffset.h
 ../Core/Inc/main.h:
 ../Drivers/STM32L4xx_HAL_Driver/Inc/stm32l4xx_hal.h:
@@ -93,6 +93,7 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Core/Src/lsm6_gyro.h:
 ../Core/Src/gps_neoM9N.h:
 ../Core/Src/uart.h:
+../Core/Src/ring_buffer.h:
 ../Core/Src/Fusion/Fusion.h:
 ../Core/Src/Fusion/../lsm6_gyro.h:
 ../Core/Src/Fusion/FusionAhrs.h:

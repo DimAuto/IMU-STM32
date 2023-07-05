@@ -1,0 +1,11 @@
+../Core/Src/ring_buffer.c:16:9:RB_init	16	static
+../Core/Src/ring_buffer.c:30:6:RB_deinit	16	static
+../Core/Src/ring_buffer.c:37:6:RB_push	16	static
+../Core/Src/ring_buffer.c:46:9:RB_pop	24	static
+../Core/Src/ring_buffer.c:55:6:RB_pushFront	24	static
+../Core/Src/ring_buffer.c:66:9:RB_popBack	16	static
+../Core/Src/ring_buffer.c:73:9:RB_capacity	16	static
+../Core/Src/ring_buffer.c:75:9:RB_size	16	static
+../Core/Src/ring_buffer.c:79:9:RB_isEmpty	16	static
+../Core/Src/ring_buffer.c:81:9:RB_isFull	16	static
+../Core/Src/ring_buffer.c:85:6:RB_clear	16	static

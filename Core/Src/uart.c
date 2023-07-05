@@ -6,13 +6,23 @@
  */
 
 #include "uart.h"
+#include "ring_buffer.h"
+#include "main.h"
 
 
 UART_HandleTypeDef huart1;
-
 UART_HandleTypeDef huart4;
 
-static void Error_Handler(void);
+RB_t uart4RXrb;
+RB_t uart1RXrb;
+
+uint8_t rxChar = 0x00;
+uint8_t prvRxChar = 0x00;
+
+extern osMessageQueueId_t messageQueueHandle;
+
+static void error_Handler(void);
+
 
 /**
   * @brief USART1 Initialization Function
@@ -48,6 +58,7 @@ void MX_USART1_UART_Init(void)
   {
     Error_Handler();
   }
+  RB_init(&uart1RXrb, RB_SIZE);
 
 }
 
@@ -67,41 +78,55 @@ void MX_UART4_Init(void)
   huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
   if (HAL_UART_Init(&huart4) != HAL_OK)
   {
-    Error_Handler();
+    error_Handler();
   }
   if (HAL_UARTEx_SetTxFifoThreshold(&huart4, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
   {
-    Error_Handler();
+    error_Handler();
   }
   if (HAL_UARTEx_SetRxFifoThreshold(&huart4, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
   {
-    Error_Handler();
+    error_Handler();
   }
   if (HAL_UARTEx_DisableFifoMode(&huart4) != HAL_OK)
   {
-    Error_Handler();
+    error_Handler();
   }
+  RB_init(&uart4RXrb, RB_SIZE);
   uart_write_debug("UART4 initialized\r\n", 10);
 
 }
 
-void Error_Handler(void){
+void error_Handler(void){
 	uart_write_debug("Failed to Init UART4\r\n", 10);
 }
 
+
+HAL_StatusTypeDef uart_receive_it(UART_select device){
+	UART_HandleTypeDef *huart;
+
+	switch (device){
+	case UART_DEBUG:
+		huart = &huart1;
+		break;
+	case UART_NYX:
+		huart = &huart4;
+		break;
+	case UART_IRIS:
+		huart = &huart1;
+		break;
+	}
+	return HAL_UART_Receive_IT(huart, &rxChar, 1);
+}
 
 
 
 
 HAL_StatusTypeDef uart_write_debug(uint8_t *pData, uint32_t Timeout){
-	uint8_t i=0;
-	uint8_t *temp;
 	return HAL_UART_Transmit(&huart1,pData,strlen(pData),Timeout);// Sending in normal mode
 }
 
-HAL_StatusTypeDef uart_write_uart(uint8_t *pData, UART_select device, uint32_t Timeout){
-	uint8_t i=0;
-	uint8_t *temp;
+HAL_StatusTypeDef uart_write(uint8_t *pData, UART_select device, uint32_t Timeout){
 	UART_HandleTypeDef *huart;
 	switch (device){
 	case UART_DEBUG:
@@ -117,4 +142,53 @@ HAL_StatusTypeDef uart_write_uart(uint8_t *pData, UART_select device, uint32_t T
 	return HAL_UART_Transmit(huart,pData,strlen(pData),Timeout);// Sending in normal mode
 }
 
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
+{
+	if (UartHandle->Instance == UART4)
+	{
+		if ((rxChar == STP) && (prvRxChar != ESC)){
+			uint8_t start_ch = 0;
+			start_ch = RB_pop(&uart4RXrb);
+			if (start_ch == STR){
+				osMessageQueuePut(messageQueueHandle, uart4RXrb.buffer, 0U, 0U);
+				uart_write("Message received\r\n", UART_NYX, 10);
+			}
+			RB_clear(&uart4RXrb);
+		}
+		 else if ((rxChar == ESC) && (prvRxChar != ESC)){
+			 prvRxChar = rxChar;
+		}
+		else if ((rxChar == ESC) && (prvRxChar == ESC)){
+			RB_push(&uart4RXrb, rxChar);
+			prvRxChar = 0x00;
+		}
+		else {
+		  RB_push(&uart4RXrb, rxChar);
+		  prvRxChar = rxChar;
+		}
+		HAL_UART_Receive_IT(&huart4, &rxChar, 1);
+	}
+	else if (UartHandle->Instance == USART1){
+		if ((rxChar == STP) && (prvRxChar != ESC)){
+		uint8_t start_ch = 0;
+		start_ch = RB_pop(&uart1RXrb);
+		if (start_ch == STR){
+			osMessageQueuePut(messageQueueHandle, uart1RXrb.buffer, 0U, 0U);
+		}
+		RB_clear(&uart1RXrb);
+		}
+		 else if ((rxChar == ESC) && (prvRxChar != ESC)){
+			 prvRxChar = rxChar;
+		}
+		else if ((rxChar == ESC) && (prvRxChar == ESC)){
+			RB_push(&uart1RXrb, rxChar);
+			prvRxChar = 0x00;
+		}
+		else {
+		  RB_push(&uart1RXrb, rxChar);
+		  prvRxChar = rxChar;
+		}
+		HAL_UART_Receive_IT(&huart1, &rxChar, 1);
+	}
 
+}
