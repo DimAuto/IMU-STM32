@@ -10,6 +10,11 @@
 
 #include "stm32l4xx_hal.h"
 
+#define STR 0x02
+#define STP 0x03
+#define ESC 0x1B
+
+
 typedef enum{
 	UART_DEBUG,
 	UART_NYX,
@@ -22,7 +27,7 @@ void MX_UART4_Init(void);
 
 HAL_StatusTypeDef uart_write_debug(uint8_t *pData, uint32_t Timeout);
 
-HAL_StatusTypeDef uart_write_uart(uint8_t *pData, UART_select device, uint32_t Timeout);
+HAL_StatusTypeDef uart_write(uint8_t *pData, UART_select device, uint32_t Timeout);
 
 
 

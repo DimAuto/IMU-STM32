@@ -28,6 +28,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l4xx_hal.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -218,11 +219,7 @@ void Error_Handler(void);
 #define ISM43362_DRDY_EXTI1_Pin GPIO_PIN_1
 #define ISM43362_DRDY_EXTI1_GPIO_Port GPIOE
 
-/* USER CODE BEGIN Private defines */
-#define UBLOX_M9N               0x42
-#define LSM303_ACC              0x19
-#define LSM303_MGN              0x1E
-#define LSM6		            0x6A
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

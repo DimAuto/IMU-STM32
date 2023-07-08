@@ -8,8 +8,14 @@
 #ifndef SRC_GPS_NEOM9N_H_
 #define SRC_GPS_NEOM9N_H_
 
+#include <stdint.h>
 #include "time.h"
+#include "stm32l4xx_hal.h"
 #include "uart.h"
+#include "main.h"
+
+#define UBLOX_M9N               (0x42 << 1)
+
 
 #define UBX_SYNCH_1     0xb5
 #define UBX_SYNCH_2     0x62
@@ -182,7 +188,9 @@ typedef struct{
 
 
 
-uint8_t ubloxInit(void);
+HAL_StatusTypeDef ubloxInit(void);
+
+uint8_t ublox_i2c_bus_init(void);
 
 void ublox_tick(void);
 
@@ -190,33 +198,33 @@ uint16_t ubloxGetBytes(uint8_t *buf);
 
 uint8_t ubloxRead(void);
 
-void ubloxNmeaGGA_set_refresh_rate(uint8_t seconds);
+HAL_StatusTypeDef ubloxNmeaGGA_set_refresh_rate(uint8_t seconds);
 
-uint8_t setPortOutput(uint8_t portSelect, uint8_t streamSettings);
+HAL_StatusTypeDef setPortOutput(uint8_t portSelect, uint8_t streamSettings);
 
-uint8_t configureNMEA(uint8_t msgClass, uint8_t msgID, uint8_t rate, uint8_t portID);
+HAL_StatusTypeDef configureNMEA(uint8_t msgClass, uint8_t msgID, uint8_t rate, uint8_t portID);
 
-uint8_t ubloxSaveConfiguration(void);
+HAL_StatusTypeDef ubloxSaveConfiguration(void);
 
-uint8_t ubloxClearConfiguration(void);
+HAL_StatusTypeDef ubloxClearConfiguration(void);
 
-uint8_t ubloxLoadConfiguration(void);
+HAL_StatusTypeDef ubloxLoadConfiguration(void);
 
-uint8_t getPortSettings(uint8_t portID, uint8_t *rx_mes);
+HAL_StatusTypeDef getPortSettings(uint8_t portID, uint8_t *rx_mes);
 
-uint8_t sendI2Cmessage(uint8_t msg_len);
+HAL_StatusTypeDef sendI2Cmessage(void);
 
-uint8_t powerOffWithInterrupt(uint32_t durationInMs, uint32_t wakeupSources);
+HAL_StatusTypeDef powerOffWithInterrupt(uint32_t durationInMs, uint32_t wakeupSources);
 
-uint8_t getMessageSettings(uint8_t msgClass, uint8_t msgID, uint8_t *rx_mes);
+HAL_StatusTypeDef getMessageSettings(uint8_t msgClass, uint8_t msgID, uint8_t *rx_mes);
 
 uint8_t parseNMEA(void);
 
-uint8_t createBackup(void);
+HAL_StatusTypeDef createBackup(void);
 
-uint8_t restoreBackupData(void);
+HAL_StatusTypeDef restoreBackupData(void);
 
-uint8_t resetReceiver(uint16_t startSelect, uint8_t start_stop);
+HAL_StatusTypeDef resetReceiver(uint16_t startSelect, uint8_t start_stop);
 
 void ublox_transmit_message(uint8_t cmd, UART_select device);
 
@@ -224,7 +232,10 @@ void init_gps_data(void);
 
 void ublox_transmit_rtc(uint8_t cmd, UART_select device);
 
-uint8_t setPowerSaveMode(uint8_t mode);
+HAL_StatusTypeDef setPowerSaveMode(uint8_t mode);
+
+HAL_StatusTypeDef UbloxI2CWriteReadPolling(uint16_t DevAddress, uint8_t *TData, uint16_t TDataLen,
+										uint8_t *RData, uint16_t RDataLen, uint32_t Timeout);
 
 
 #endif /* SRC_GPS_NEOM9N_H_ */
