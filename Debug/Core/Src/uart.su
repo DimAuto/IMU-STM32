@@ -1,7 +1,0 @@
-../Core/Src/uart.c:32:6:MX_USART1_UART_Init	8	static
-../Core/Src/uart.c:65:6:MX_UART4_Init	8	static
-../Core/Src/uart.c:100:6:error_Handler	8	static
-../Core/Src/uart.c:105:19:uart_receive_it	24	static
-../Core/Src/uart.c:125:19:uart_write_debug	16	static
-../Core/Src/uart.c:129:19:uart_write	32	static
-../Core/Src/uart.c:145:6:HAL_UART_RxCpltCallback	24	static

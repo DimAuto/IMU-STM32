@@ -1,7 +1,0 @@
-uart.c:32:6:MX_USART1_UART_Init	5
-uart.c:65:6:MX_UART4_Init	5
-uart.c:100:6:error_Handler	1
-uart.c:105:19:uart_receive_it	5
-uart.c:125:19:uart_write_debug	1
-uart.c:129:19:uart_write	5
-uart.c:145:6:HAL_UART_RxCpltCallback	17
