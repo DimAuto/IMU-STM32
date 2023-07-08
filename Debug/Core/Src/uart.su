@@ -1,5 +1,0 @@
-../Core/Src/uart.c:22:6:MX_USART1_UART_Init	8	static
-../Core/Src/uart.c:54:6:MX_UART4_Init	8	static
-../Core/Src/uart.c:88:6:Error_Handler	8	static
-../Core/Src/uart.c:96:19:uart_write_debug	24	static
-../Core/Src/uart.c:102:19:uart_write_uart	32	static
