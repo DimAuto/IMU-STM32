@@ -23,9 +23,9 @@
 #include "uart.h"
 #include "ring_buffer.h"
 #include "Fusion/Fusion.h"
+#include "message_handler.h"
 
-extern RB_t uart4RXrb;
-extern RB_t uart1RXrb;
+
 
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -124,40 +124,17 @@ void getCoorsTask(void *argument);
 void readMessageTask(void *argument);
 void sendMessageTask(void *argument);
 
-/* USER CODE BEGIN PFP */
-
-/* USER CODE END PFP */
-
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
-
 /**
   * @brief  The application entry point.
   * @retval int
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
@@ -201,17 +178,14 @@ int main(void)
 
   /* Init scheduler */
   osKernelInitialize();
-
   /* USER CODE BEGIN RTOS_MUTEX */
   debugUartMutex = osMutexNew(&uartMutex_attributes);
-
   i2cMutex = osMutexNew(&i2cMutex_attributes);
   /* USER CODE END RTOS_MUTEX */
   memsQueueHandle = osMessageQueueNew (4, sizeof(mems_data_t), &memsQueue_attributes);
   outputQueueHandle = osMessageQueueNew (4, sizeof(FusionEuler), &outputQueue_attributes);
-  messageQueueHandle = osMessageQueueNew (8, sizeof(uart4RXrb.buffer), &messageQueue_attributes);
-  /* Create the thread(s) */
-  /* creation of defaultTask */
+  messageQueueHandle = osMessageQueueNew (8, RB_SIZE, &messageQueue_attributes);
+
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   readMemsTaskHandle = osThreadNew(readMemsTask, NULL, &readMemsTask_attributes);
@@ -327,7 +301,13 @@ void getCoorsTask(void *argument){
 }
 
 void readMessageTask(void *argument){
+	osStatus_t status;
+	uint8_t message_buffer[RB_SIZE] = {0};
 	for(;;){
+		status = osMessageQueueGet(messageQueueHandle, message_buffer, NULL, osWaitForever);   // wait for message
+		if (status == osOK) {
+			tick_Handler(message_buffer);
+		}
 		osDelay(500);
 	}
 }

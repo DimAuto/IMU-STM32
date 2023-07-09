@@ -10,13 +10,18 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "core/uart.h"
-#include <src/config.h>
 
 #define SBP_S_ID            0x32
 #define COMM_PROTOCOL_REV   0x01
 #define PROTOCOL_VER        0xFE
 #define MAX_RETRIES         0x03
+
+#define STX 	0x02
+#define ETX 	0x03
+#define ESC 	0x1B
+#define NACK 	0x15
+#define ACK		0x06
+
 
 
 // SBP-S COMMANDS
@@ -46,7 +51,7 @@ typedef struct{
 /**
  * Ticks the message handler
  */
-void tick_Handler(void);
+void tick_Handler(uint8_t *data);
 
 /**
  * Sends a two byte NACK
@@ -76,7 +81,7 @@ uint8_t transmitMessage(uint8_t *data, uint8_t data_len, uint8_t cmd, UART_selec
  * @param device
  * @return
  */
-uint8_t parseMessage(uint8_t *data, uint8_t len, UART_select device);
+uint8_t parseMessage(uint8_t *data, UART_select device);
 
 
 void reportFW(uint8_t cmd, UART_select device);

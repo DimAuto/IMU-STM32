@@ -8,6 +8,7 @@
 #include "uart.h"
 #include "ring_buffer.h"
 #include "main.h"
+#include "message_handler.h"
 
 
 UART_HandleTypeDef huart1;
@@ -126,7 +127,7 @@ HAL_StatusTypeDef uart_write_debug(uint8_t *pData, uint32_t Timeout){
 	return HAL_UART_Transmit(&huart1,pData,strlen(pData),Timeout);// Sending in normal mode
 }
 
-HAL_StatusTypeDef uart_write(uint8_t *pData, UART_select device, uint32_t Timeout){
+HAL_StatusTypeDef uart_write(uint8_t *pData, uint8_t len, UART_select device, uint32_t Timeout){
 	UART_HandleTypeDef *huart;
 	switch (device){
 	case UART_DEBUG:
@@ -139,19 +140,30 @@ HAL_StatusTypeDef uart_write(uint8_t *pData, UART_select device, uint32_t Timeou
 		huart = &huart1;
 		break;
 	}
-	return HAL_UART_Transmit(huart,pData,strlen(pData),Timeout);// Sending in normal mode
+	if (len == 0){
+		return HAL_UART_Transmit(huart,pData,strlen(pData),Timeout);// Sending in normal mode
+	}
+	return HAL_UART_Transmit(huart,pData,len,Timeout);// Sending in normal mode
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 {
 	if (UartHandle->Instance == UART4)
 	{
-		if ((rxChar == STP) && (prvRxChar != ESC)){
+		if ((rxChar == ACK) && (prvRxChar == 0xFF)){
+
+		}
+		else if ((rxChar == NACK) && (prvRxChar == 0xFF)){
+
+		}
+		else if ((rxChar == ETX) && (prvRxChar != ESC)){
 			uint8_t start_ch = 0;
 			start_ch = RB_pop(&uart4RXrb);
-			if (start_ch == STR){
+			if (start_ch == STX){
+				uint8_t rb_len = RB_size(&uart4RXrb);
+				RB_pushFront(&uart4RXrb, rb_len);
 				osMessageQueuePut(messageQueueHandle, uart4RXrb.buffer, 0U, 0U);
-				uart_write("Message received\r\n", UART_NYX, 10);
+				prvRxChar = 0xFF;
 			}
 			RB_clear(&uart4RXrb);
 		}
@@ -169,10 +181,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 		HAL_UART_Receive_IT(&huart4, &rxChar, 1);
 	}
 	else if (UartHandle->Instance == USART1){
-		if ((rxChar == STP) && (prvRxChar != ESC)){
+		if ((rxChar == ETX) && (prvRxChar != ESC)){
 		uint8_t start_ch = 0;
 		start_ch = RB_pop(&uart1RXrb);
-		if (start_ch == STR){
+		if (start_ch == STX){
 			osMessageQueuePut(messageQueueHandle, uart1RXrb.buffer, 0U, 0U);
 		}
 		RB_clear(&uart1RXrb);

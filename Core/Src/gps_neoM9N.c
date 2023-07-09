@@ -69,26 +69,26 @@ void ublox_tick(void){
     }
 }
 
-//void ublox_transmit_rtc(uint8_t cmd, UART_select device){
-//    transmitMessage(gps_data.timestamp, 9, cmd, device);
-//}
-//
-//void ublox_transmit_message(uint8_t cmd, UART_select device){
-//    uint8_t message[12] = {0};
-//    message[0] = (gps_data.latitude & 0xFF000000) >> 24;
-//    message[1] = (gps_data.latitude & 0x00FF0000) >> 16;
-//    message[2] = (gps_data.latitude & 0x0000FF00) >> 8;
-//    message[3] = (gps_data.latitude & 0x000000FF);
-//    message[4] = (gps_data.longtitude & 0xFF000000) >> 24;
-//    message[5] = (gps_data.longtitude & 0x00FF0000) >> 16;
-//    message[6] = (gps_data.longtitude & 0x0000FF00) >> 8;
-//    message[7] = (gps_data.longtitude & 0x000000FF);
-//    message[8] = (gps_data.altitude & 0xFF000000) >> 24;
-//    message[9] = (gps_data.altitude & 0x00FF0000) >> 16;
-//    message[10] = (gps_data.altitude & 0x0000FF00) >> 8;
-//    message[11] = (gps_data.altitude & 0x000000FF);
-//    transmitMessage(message, 12, cmd, device);
-//}
+void ublox_transmit_rtc(uint8_t cmd, UART_select device){
+    transmitMessage(gps_data.timestamp, 9, cmd, device);
+}
+
+void ublox_transmit_message(uint8_t cmd, UART_select device){
+    uint8_t message[12] = {0};
+    message[0] = (gps_data.latitude & 0xFF000000) >> 24;
+    message[1] = (gps_data.latitude & 0x00FF0000) >> 16;
+    message[2] = (gps_data.latitude & 0x0000FF00) >> 8;
+    message[3] = (gps_data.latitude & 0x000000FF);
+    message[4] = (gps_data.longtitude & 0xFF000000) >> 24;
+    message[5] = (gps_data.longtitude & 0x00FF0000) >> 16;
+    message[6] = (gps_data.longtitude & 0x0000FF00) >> 8;
+    message[7] = (gps_data.longtitude & 0x000000FF);
+    message[8] = (gps_data.altitude & 0xFF000000) >> 24;
+    message[9] = (gps_data.altitude & 0x00FF0000) >> 16;
+    message[10] = (gps_data.altitude & 0x0000FF00) >> 8;
+    message[11] = (gps_data.altitude & 0x000000FF);
+    transmitMessage(message, 12, cmd, device);
+}
 
 HAL_StatusTypeDef ubloxInit(void){
 	HAL_StatusTypeDef ret=0x00;

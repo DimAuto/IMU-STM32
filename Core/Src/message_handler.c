@@ -5,30 +5,15 @@
  *      Author: kalai
  */
 
-#include <src/message_handler.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "core/uart.h"
-#include "core/helpers.h"
-#include "core/i2c.h"
-#include "core/adc.h"
-#include "config.h"
 #include "gps_neoM9N.h"
-#include "lsm303.h"
-#include "core/timer.h"
-#include "battery_monitor.h"
-#include "sbp_gpio.h"
-
-// Global variables
-extern uint8_t transEnd_debug;
-extern uint8_t transEnd_iris;
-extern uint8_t transEnd_nyx;
-//-----------------------
+#include "message_handler.h"
+#include "uart.h"
+#include "main.h"
 
 static uint8_t TOKEN = 0;
-
-
 static void calcChecksum(void);
 static uint8_t calcDataSize(uint8_t *data, uint8_t len);
 static void jump_BSL(void);
@@ -40,33 +25,13 @@ uint8_t flag_connected_toIris = 0;
 static uint8_t message_d[25]={0};
 static message_t msg;
 
-void tick_Handler(void){
-    uint16_t mess_len = 0;
+void tick_Handler(uint8_t *data){
+	uint8_t mess_len = 0;
     init_message_t();
 
-    if (transEnd_iris){
-        mess_len = uart_RX_getSize(UART_IRIS);
-        uart_read_RB(message_d, UART_IRIS);
-        if (!parseMessage(message_d, mess_len, UART_IRIS)){
-            handler(UART_IRIS);
-        }
-    }
-
-    if (transEnd_debug){
-        mess_len = uart_RX_getSize(UART_DEBUG);
-        uart_read_RB(message_d, UART_DEBUG);
-        if (!parseMessage(message_d, mess_len, UART_DEBUG)){
-            handler(UART_DEBUG);
-        }
-    }
-
-    if (transEnd_nyx){
-        mess_len = uart_RX_getSize(UART_NYX);
-        uart_read_RB(message_d, UART_NYX);
-        if (!parseMessage(message_d, mess_len, UART_NYX)){
-            handler(UART_NYX);
-        }
-    }
+	if (!parseMessage(data, UART_NYX)){
+		handler(UART_NYX);
+	}
 }
 
 uint8_t send_heartbeat(UART_select device){
@@ -77,28 +42,24 @@ uint8_t send_heartbeat(UART_select device){
 uint8_t sendNack(UART_select device){
     if ((TOKEN == ESC) || (TOKEN == ETX) || (TOKEN == STX)){
         uint8_t msg[3] = {NACK,ESC,TOKEN};
-        return uart_write_RB(msg, 3, device);
+        return uart_write(msg, 3, device, 5);
     }
     else{
         uint8_t msg[2] = {NACK,TOKEN};
-        return uart_write_RB(msg, 2, device);
+        return uart_write(msg, 2, device, 5);
     }
 }
 
 uint8_t sendAck(UART_select device){
     if ((TOKEN == ESC) || (TOKEN == ETX) || (TOKEN == STX)){
         uint8_t msg[3] = {ACK,ESC,TOKEN};
-        return uart_write_RB(msg, 3, device);
+        return uart_write(msg, 3, device, 5);
     }
     else{
         uint8_t msg[2] = {ACK,TOKEN};
-        return uart_write_RB(msg, 2, device);
+        return uart_write(msg, 2, device, 5);
     }
 }
-
-//uint16_t get_heartbeat_timeout(void){
-//    return hb_timeout;
-//}
 
 static uint8_t calcDataSize(uint8_t *data, uint8_t len){
     uint8_t j,i;
@@ -120,9 +81,6 @@ uint8_t transmitMessage(uint8_t *data, uint8_t data_len, uint8_t cmd, UART_selec
 
     tmp_len = calcDataSize(data, data_len);
     msg.len = data_len;
-//    message = malloc((tmp_len+14)*sizeof(uint8_t));
-//    if (!message)return 1;
-//    memset(message, 0,tmp_len+14);
     memcpy(msg.data, data, msg.len);
     msg.protocol_rev[0] = PROTOCOL_VER;
     msg.protocol_rev[1] = COMM_PROTOCOL_REV;
@@ -135,9 +93,8 @@ uint8_t transmitMessage(uint8_t *data, uint8_t data_len, uint8_t cmd, UART_selec
     msg.token = TOKEN;
 
     msg.cmd = cmd;
-    msg.senderID[0] = ESC_CHAR;
+    msg.senderID[0] = ESC;
     msg.senderID[1] = SBP_S_ID;
-//    msg.cmd = msg.cmd; Remains the same
     calcChecksum();
     //CREATE MESSAGE
     index = 0;
@@ -197,16 +154,8 @@ uint8_t transmitMessage(uint8_t *data, uint8_t data_len, uint8_t cmd, UART_selec
         index++;
         msg.len = index;
     }
-    uart_write_RB(message, msg.len , device);
-    uint16_t timeout = millis();
-    while((ellapsed_millis(timeout) < 150)){
-        if (uart_wait_ACK(device) == 0){
-            return 0;
-        }
-        else{
-            return 1;
-        }
-    }
+
+    uart_write(message, msg.len, device, 10);
     return 1;
 }
 
@@ -229,40 +178,39 @@ static void calcChecksum(void){
 }
 
 
-uint8_t parseMessage(uint8_t *data, uint8_t len, UART_select device){
+uint8_t parseMessage(uint8_t *data, UART_select device){
     uint8_t chsum = 0;
+    uint8_t len = data[0];
     if (len < 11){
         sendNack(device);
         return 1;
     }
-    msg.len = len-11;
+    msg.len = len-10;
     if (!msg.data)return 2;
-    msg.protocol_rev[0] = data[0];
-    msg.protocol_rev[1] = data[1];
-    msg.token = data[2];
+    msg.protocol_rev[0] = data[1];
+    msg.protocol_rev[1] = data[2];
+    msg.token = data[3];
     TOKEN = msg.token;
-    msg.senderID[0] = data[3];
-    msg.senderID[1] = data[4];
-    msg.cmd = data[5];
+    msg.senderID[0] = data[4];
+    msg.senderID[1] = data[5];
+    msg.cmd = data[6];
     uint8_t i;
     for (i=0; i<msg.len; i++){
 //        if (data[6+i] == ESC) i++;
-        msg.data[i] = data[6+i];
+        msg.data[i] = data[7+i];
     }
-    msg.checksum[3] = data[6+i];
-    msg.checksum[2] = data[7+i];
-    msg.checksum[1] = data[8+i];
-    msg.checksum[0] = data[9+i];
+    msg.checksum[3] = data[7+i];
+    msg.checksum[2] = data[8+i];
+    msg.checksum[1] = data[9+i];
+    msg.checksum[0] = data[10+i];
     chsum = msg.checksum[0];
     calcChecksum();
     if (chsum != msg.checksum[0]){
         sendNack(device);
-//        uart_write_DEBUG("NACK\r\n", UART_NYX);
         return 1;
     }
     sendAck(device);
-    delayMS(22);
-//    uart_write_DEBUG("ACK\r\n", UART_NYX);
+//    HAL_Delay(22);
     return 0;                  //Note that after the parsing the escape chars remains in payload.
 }
 
@@ -277,43 +225,20 @@ void handler(UART_select device){
     case 0x56:
         ublox_transmit_message(msg.cmd, device);
         break;
-    case 0x57:
-        magn_transmit_message(msg.cmd, device);
-        break;
-    case 0x58:
-        accel_transmit_message(msg.cmd, device);
-        break;
-    case 0x60:
-        jump_BSL();
-        break;
     case 0x65:
         reportFW(msg.cmd, device);
         break;
-    case 0x70:
-        transmit_battery_voltage(msg.cmd, device);
-        break;
-    case 0x72:
-        transmit_external_voltage(msg.cmd, device);
-        break;
-    case 0x74:
-        transmit_power_line(msg.cmd, device);
-        break;
+
 //    case 0x78:
 //        transmit_nyx_consumption(msg.cmd, device);
 //        break;
     case 0x80:
         ublox_transmit_rtc(msg.cmd, device);
         break;
-    case 0x81:
-        transmit_nyx_consumption(msg.cmd, device);
-        break;
-    case 0x82:
-        transmit_nyx_flipped_flag(msg.cmd, device);
-        break;
     case 0xA0:
-        gpio_setGNSS_RESET(PIN_LOW);
-        delayMS(500);
-        gpio_setGNSS_RESET(PIN_HIGH);
+//        gpio_setGNSS_RESET(PIN_LOW);
+        HAL_Delay(500);
+//        gpio_setGNSS_RESET(PIN_HIGH);
         break;
     default:
         break;
@@ -339,16 +264,5 @@ void reportFW(uint8_t cmd, UART_select device){
     transmitMessage(fwv, 1, cmd, device);
 }
 
-void jump_BSL(void){
-#ifdef __DEBUG__
-    uart_write_DEBUG("ENTERED_BSL",UART_DEBUG);
-    uart_write_DEBUG("\n",UART_DEBUG);
-#endif
-    watchdog_stop();
-    MPUCTL0 = MPUPW;    //DISABLE MEMORY PROTECT UNIT !! MANDATORY !!
-    delayMS(100);
-    _disable_interrupt(); // disable interrupts
-    ((void ( * )())0x1000)();   // jump to BSL
-}
 
 

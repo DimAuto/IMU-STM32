@@ -10,6 +10,8 @@
 
 #include <stdint.h>
 
+void arrayRemoveFirstCharacter(uint8_t *array, uint8_t max_size);
+
 const char *float_to_char(float num);
 
 const char *int_to_char(uint16_t num);
