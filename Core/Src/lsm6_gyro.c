@@ -117,9 +117,13 @@ HAL_StatusTypeDef gyro_read(mems_data_t *mems_data){
 	int16_t gyro_x, gyro_y, gyro_z;
 	HAL_StatusTypeDef res = HAL_OK;
     HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTX_L_G, I2C_MEMADD_SIZE_8BIT, data, 6, 50);
-    /*Timestamp Read*/
+    if (res != HAL_OK){
+		return res;
+	}
     HAL_I2C_Mem_Read(&hi2c2, LSM6, TIMESTAMP0, I2C_MEMADD_SIZE_8BIT, ts_data, 4, 50);
-
+    if (res != HAL_OK){
+		return res;
+	}
     gyro_x = ((int16_t)((data[1] << 8) | data[0]));
     gyro_y = ((int16_t)((data[3] << 8) | data[2]));
     gyro_z = ((int16_t)((data[5] << 8) | data[4]));
@@ -134,7 +138,10 @@ HAL_StatusTypeDef lsm6_acc_read(mems_data_t *mems_data){
 	uint8_t data[6] = {0};
 	int16_t acc_x, acc_y, acc_z;
 	HAL_StatusTypeDef res = HAL_OK;
-	HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTX_L_A, I2C_MEMADD_SIZE_8BIT, data, 6, 50);
+	res = HAL_I2C_Mem_Read(&hi2c2, LSM6, OUTX_L_A, I2C_MEMADD_SIZE_8BIT, data, 6, 50);
+	if (res != HAL_OK){
+		return res;
+	}
     acc_x = ((int16_t)((data[1] << 8) | data[0]));
     acc_y = ((int16_t)((data[3] << 8) | data[2]));
     acc_z = ((int16_t)((data[5] << 8) | data[4]));
@@ -150,6 +157,9 @@ HAL_StatusTypeDef lis3_magn_read(mems_data_t *mems_data){
     HAL_StatusTypeDef res = HAL_OK;
 
     HAL_I2C_Mem_Read(&hi2c2, LIS3_MAGN, OUT_X_L_MG, I2C_MEMADD_SIZE_8BIT, data, 6, 50);
+    if (res != HAL_OK){
+    	return res;
+	}
     magn_x = ((int16_t)((data[1] << 8) | data[0]));
     magn_y = ((int16_t)((data[3] << 8) | data[2]));
     magn_z = ((int16_t)((data[5] << 8) | data[4]));
@@ -161,29 +171,29 @@ HAL_StatusTypeDef lis3_magn_read(mems_data_t *mems_data){
 
 void debugPrintMEMS(mems_data_t *mems_data){
 	uint8_t text[20] = {0};
-//	uart_write_uart4("TS:", 50);
-//	memcpy(text,0,10);
-//	sprintf(text, "%d-,", mems_data->timestamp);
-//	uart_write_debug(text, 50);
-//	memcpy(text,0,10);
-//	sprintf(text, "%f,", mems_data->acc_x);
-//	uart_write_debug(text, 50);
-//	memcpy(text,0,10);
-//	sprintf(text, "%f,", mems_data->acc_y);
-//	uart_write_debug(text, 50);
-//	memcpy(text,0,10);
-//	sprintf(text, "%f,", mems_data->acc_z);
-//	uart_write_debug(text, 50);
-//	memcpy(text,0,10);
-//	sprintf(text, "%f,", mems_data->gyro_x);
-//	uart_write_debug(text, 50);
-//	memcpy(text,0,10);
-//	sprintf(text, "%f,", mems_data->gyro_y);
-//	uart_write_debug(text, 50);
-//	memcpy(text,0,10);
-//	sprintf(text, "%f,", mems_data->gyro_z);
-//	uart_write_debug(text, 50);
-//	memcpy(text,0,10);
+	uart_write_uart4("TS:", 50);
+	memcpy(text,0,10);
+	sprintf(text, "%d-,", mems_data->timestamp);
+	uart_write_debug(text, 50);
+	memcpy(text,0,10);
+	sprintf(text, "%f,", mems_data->acc_x);
+	uart_write_debug(text, 50);
+	memcpy(text,0,10);
+	sprintf(text, "%f,", mems_data->acc_y);
+	uart_write_debug(text, 50);
+	memcpy(text,0,10);
+	sprintf(text, "%f,", mems_data->acc_z);
+	uart_write_debug(text, 50);
+	memcpy(text,0,10);
+	sprintf(text, "%f,", mems_data->gyro_x);
+	uart_write_debug(text, 50);
+	memcpy(text,0,10);
+	sprintf(text, "%f,", mems_data->gyro_y);
+	uart_write_debug(text, 50);
+	memcpy(text,0,10);
+	sprintf(text, "%f,", mems_data->gyro_z);
+	uart_write_debug(text, 50);
+	memcpy(text,0,10);
 	sprintf(text, "%f,", mems_data->magn_x);
 	uart_write_debug(text, 50);
 	memcpy(text,0,10);

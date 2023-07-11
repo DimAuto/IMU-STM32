@@ -20,7 +20,10 @@ RB_t uart1RXrb;
 uint8_t rxChar = 0x00;
 uint8_t prvRxChar = 0x00;
 
+uint8_t ack_rcv_flag = 0;
+
 extern osMessageQueueId_t messageQueueHandle;
+extern osEventFlagsId_t ack_rcvd;
 
 static void error_Handler(void);
 
@@ -150,33 +153,46 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 {
 	if (UartHandle->Instance == UART4)
 	{
-		if ((rxChar == ACK) && (prvRxChar == 0xFF)){
-
-		}
-		else if ((rxChar == NACK) && (prvRxChar == 0xFF)){
-
-		}
-		else if ((rxChar == ETX) && (prvRxChar != ESC)){
-			uint8_t start_ch = 0;
-			start_ch = RB_pop(&uart4RXrb);
-			if (start_ch == STX){
-				uint8_t rb_len = RB_size(&uart4RXrb);
-				RB_pushFront(&uart4RXrb, rb_len);
-				osMessageQueuePut(messageQueueHandle, uart4RXrb.buffer, 0U, 0U);
-				prvRxChar = 0xFF;
+		if (ack_rcv_flag == 1){
+			if ((rxChar != ESC) && (prvRxChar == ACK)){
+				osEventFlagsSet(ack_rcvd, ACK_FLAG);
+				prvRxChar = 0x00;
+				ack_rcv_flag = 0;
 			}
-			RB_clear(&uart4RXrb);
+			else if ((rxChar != ESC) && (prvRxChar == NACK)){
+				osEventFlagsSet(ack_rcvd, NACK_FLAG);
+				prvRxChar = 0x00;
+				ack_rcv_flag = 0;
+			}
 		}
-		 else if ((rxChar == ESC) && (prvRxChar != ESC)){
-			 prvRxChar = rxChar;
-		}
-		else if ((rxChar == ESC) && (prvRxChar == ESC)){
-			RB_push(&uart4RXrb, rxChar);
-			prvRxChar = 0x00;
-		}
-		else {
-		  RB_push(&uart4RXrb, rxChar);
-		  prvRxChar = rxChar;
+		else{
+			if (((rxChar == ACK) || (rxChar == NACK)) && (prvRxChar == 0xFF)){
+				ack_rcv_flag = 1;
+				prvRxChar = rxChar;
+			}
+			else if ((rxChar == ETX) && (prvRxChar != ESC)){
+				uint8_t start_ch = 0;
+				start_ch = RB_pop(&uart4RXrb);
+				if (start_ch == STX){
+					uint8_t rb_len = RB_size(&uart4RXrb);
+					RB_pushFront(&uart4RXrb, rb_len);
+					osMessageQueuePut(messageQueueHandle, uart4RXrb.buffer, 0U, 0U);
+					prvRxChar = 0xFF;
+				}
+				RB_clear(&uart4RXrb);
+			}
+			else if ((rxChar == ESC) && (prvRxChar != ESC)){
+				 prvRxChar = rxChar;
+			}
+			else if ((rxChar == ESC) && (prvRxChar == ESC)){
+				RB_push(&uart4RXrb, rxChar);
+				prvRxChar = 0x00;
+			}
+			else {
+			  RB_push(&uart4RXrb, rxChar);
+			  if (rxChar == 0xFF) prvRxChar = 0x00;
+			  prvRxChar = rxChar;
+			}
 		}
 		HAL_UART_Receive_IT(&huart4, &rxChar, 1);
 	}

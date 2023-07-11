@@ -128,10 +128,10 @@ uint8_t ubloxRead(void){
         if ((res != HAL_OK) || (gps_data.sentence[0] != '$')){
                 return 10;
         }
-//#ifdef __DEBUG__
+#ifdef __DEBUG__
         uart_write_debug(gps_data.sentence, 50);
         uart_write_debug("\r\n", 10);
-//#endif
+#endif
         return res;
     }
     return 10;

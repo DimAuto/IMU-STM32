@@ -112,6 +112,10 @@ const osMessageQueueAttr_t messageQueue_attributes = {
   .name = "messageQueue"
 };
 
+
+// Ack receive event flag
+osEventFlagsId_t ack_rcvd;
+
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
@@ -182,9 +186,12 @@ int main(void)
   debugUartMutex = osMutexNew(&uartMutex_attributes);
   i2cMutex = osMutexNew(&i2cMutex_attributes);
   /* USER CODE END RTOS_MUTEX */
-  memsQueueHandle = osMessageQueueNew (4, sizeof(mems_data_t), &memsQueue_attributes);
+  memsQueueHandle = osMessageQueueNew (8, sizeof(mems_data_t), &memsQueue_attributes);
   outputQueueHandle = osMessageQueueNew (4, sizeof(FusionEuler), &outputQueue_attributes);
   messageQueueHandle = osMessageQueueNew (8, RB_SIZE, &messageQueue_attributes);
+  /* EVENT FLAG FOR ACK RECEIVE */
+  ack_rcvd = osEventFlagsNew(NULL);
+  //							//
 
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
@@ -196,7 +203,7 @@ int main(void)
 
   getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
 
-  sendMessageTaskHandle = osThreadNew(sendMessageTask, NULL, &sendMessageTaskHandle_attributes);
+//  sendMessageTaskHandle = osThreadNew(sendMessageTask, NULL, &sendMessageTaskHandle_attributes);
 
   readMessageTaskHandle = osThreadNew(readMessageTask, NULL, &readMessageTaskHandle_attributes);
 
@@ -242,12 +249,12 @@ void calcHeadingTask(void *argument)
 
 	for(;;)
 	{
-		status = osMessageQueueGet(memsQueueHandle, &mems_data, NULL, 2U);   // wait for message
+		status = osMessageQueueGet(memsQueueHandle, &mems_data, NULL, 5U);   // wait for message
 	    if (status == osOK) {
 	    	FusionCalcHeading(&mems_data, &euler);
-	    	osMessageQueuePut(outputQueueHandle, &euler, 0U, 2U);
+	    	osMessageQueuePut(outputQueueHandle, &euler, 0U, 5U);
 	    }
-		osDelay(10);
+		osDelay(30);
 	}
 }
 
@@ -259,8 +266,8 @@ void readMemsTask(void *argument)
 		osMutexAcquire(i2cMutex, osWaitForever);
 		tick_gyro(&mems_data);
 		osMutexRelease(i2cMutex);
-		osMessageQueuePut(memsQueueHandle, &mems_data, 0U, 2U);
-		osDelay(50);
+		osMessageQueuePut(memsQueueHandle, &mems_data, 0U, 5U);
+		osDelay(10);
 	}
 }
 
@@ -274,7 +281,7 @@ void printOutTask(void *argument)
 
 	for(;;)
 	{
-		status = osMessageQueueGet(outputQueueHandle, &euler, NULL, 2U);   // wait for message
+		status = osMessageQueueGet(outputQueueHandle, &euler, NULL, 5U);   // wait for message
 		if (status == osOK) {
 			sprintf(text, "\n%f\r", euler.angle.yaw);
 			osMutexAcquire(debugUartMutex, osWaitForever);
@@ -291,32 +298,37 @@ void getCoorsTask(void *argument){
 
 	for(;;)
 	{
-		osMutexAcquire(i2cMutex, osWaitForever);
-		osMutexAcquire(debugUartMutex, osWaitForever);
+//		osMutexAcquire(i2cMutex, osWaitForever);
+//		osMutexAcquire(debugUartMutex, osWaitForever);
 		ublox_tick();
-		osMutexRelease(i2cMutex);
-		osMutexRelease(debugUartMutex);
+//		osMutexRelease(i2cMutex);
+//		osMutexRelease(debugUartMutex);
 		osDelay(1700);
 	}
 }
 
 void readMessageTask(void *argument){
 	osStatus_t status;
+	uint32_t ack_flag;
 	uint8_t message_buffer[RB_SIZE] = {0};
 	for(;;){
 		status = osMessageQueueGet(messageQueueHandle, message_buffer, NULL, osWaitForever);   // wait for message
 		if (status == osOK) {
 			tick_Handler(message_buffer);
+			ack_flag = osEventFlagsWait(ack_rcvd, ACK_FLAG, osFlagsWaitAny, 150);
+			if (ack_flag != 1){
+				tick_Handler(message_buffer);
+			}
 		}
-		osDelay(500);
+		osDelay(200);
 	}
 }
 
-void sendMessageTask(void *argument){
-	for(;;){
-		osDelay(500);
-	}
-}
+//void sendMessageTask(void *argument){
+//	for(;;){
+//		osDelay(500);
+//	}
+//}
 
 
 //////////// SYSTEM CONFIG ///////////////////

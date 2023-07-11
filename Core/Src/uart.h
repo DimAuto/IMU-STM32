@@ -17,6 +17,9 @@ typedef enum{
 	UART_IRIS
 }UART_select;
 
+#define ACK_FLAG 0x00000001U
+#define NACK_FLAG 0x00000000U
+
 void MX_USART1_UART_Init(void);
 
 void MX_UART4_Init(void);

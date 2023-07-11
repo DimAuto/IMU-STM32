@@ -38,6 +38,7 @@
 
 #define MESSAGE_RETRANSMIT_INTERVAL 300
 
+
 typedef struct{
     uint8_t protocol_rev[2];
     uint8_t token;
