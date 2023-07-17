@@ -25,7 +25,8 @@ uint8_t gps_data_backup_flag = 0;   //Flag to enable gps data backup only on boo
 
 uint8_t ublox_i2c_bus_init(void){
 	hi2c1.Instance = I2C1;
-	hi2c1.Init.Timing = 0x00B03FDB;
+//	hi2c1.Init.Timing = 0x00B03FDB;
+	hi2c1.Init.Timing = 0x307075B1;
 	hi2c1.Init.OwnAddress1 = 0;
 	hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
 	hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -231,7 +232,7 @@ static void calcChecksum(messageCFG_t *msg){
 }
 
 HAL_StatusTypeDef sendI2Cmessage(void){
-    uint8_t message[40] = {0};
+    uint8_t message[60] = {0};
     uint8_t len = config_message.len + 8;
     message[0] = UBX_SYNCH_1;
     message[1] = UBX_SYNCH_2;
@@ -402,6 +403,7 @@ HAL_StatusTypeDef powerModeGet(void){
     config_message.cls = UBX_CLASS_CFG;
     config_message.id = UBX_CFG_RXM;
     config_message.len = 0;
+    calcChecksum(&config_message);
     uint8_t message[10] = {0};
     message[0] = UBX_SYNCH_1;
     message[1] = UBX_SYNCH_2;
@@ -411,9 +413,70 @@ HAL_StatusTypeDef powerModeGet(void){
     message[5] = (config_message.len >> 8);
     message[6] = config_message.checksumA;
     message[7] = config_message.checksumB;
-    res = UbloxI2CWriteReadPolling(UBLOX_M9N, message, 8, data, 9, 100);
+    res = UbloxI2CWriteReadPolling(UBLOX_M9N, message, 8, data, 10, 100);
     if (res != HAL_OK)return res;
-    return data[1];
+    return data[7];
+}
+
+
+HAL_StatusTypeDef powerModeSetupGet(void){
+    uint8_t res = 0;
+    uint8_t data[16] = {0};
+    config_message.cls = UBX_CLASS_CFG;
+    config_message.id = UBX_CFG_PMS;
+    config_message.len = 0;
+    calcChecksum(&config_message);
+    uint8_t message[10] = {0};
+    message[0] = UBX_SYNCH_1;
+    message[1] = UBX_SYNCH_2;
+    message[2] = config_message.cls;
+    message[3] = config_message.id;
+    message[4] = (config_message.len & 0xFF);
+    message[5] = (config_message.len >> 8);
+    message[6] = config_message.checksumA;
+    message[7] = config_message.checksumB;
+    res = UbloxI2CWriteReadPolling(UBLOX_M9N, message, 8, data, 16, 100);
+    if (res != HAL_OK)return res;
+    return data[7];
+}
+
+
+HAL_StatusTypeDef powerManageCfgGet(uint8_t *payload){
+    config_message.cls = UBX_CLASS_CFG;
+    config_message.id = UBX_CFG_PM2;
+    config_message.len = 0;
+    calcChecksum(&config_message);
+    uint8_t message[10] = {0};
+    message[0] = UBX_SYNCH_1;
+    message[1] = UBX_SYNCH_2;
+    message[2] = config_message.cls;
+    message[3] = config_message.id;
+    message[4] = (config_message.len & 0xFF);
+    message[5] = (config_message.len >> 8);
+    message[6] = config_message.checksumA;
+    message[7] = config_message.checksumB;
+    return UbloxI2CWriteReadPolling(UBLOX_M9N, message, 8, payload, 56, 200);
+}
+
+
+HAL_StatusTypeDef powerManageCfgSet(uint8_t maxAckTime){
+    uint8_t payloadCfg[48] = {0};
+    uint8_t payload[56] = {0};
+    uint8_t i;
+    uint8_t res = HAL_OK;
+    res = powerManageCfgGet(payload);
+//    if ( res != HAL_OK) return res;
+    for(i=0;i<=48;i++){
+    	payloadCfg[i] = payload[i+6];
+    }
+    config_message.cls = UBX_CLASS_CFG;
+    config_message.id =  UBX_CFG_PM2;
+    config_message.len = 48;
+    payloadCfg[2] = maxAckTime;
+    payloadCfg[2] = 67;
+    config_message.payload = payloadCfg;
+    calcChecksum(&config_message);
+    return sendI2Cmessage();
 }
 
 

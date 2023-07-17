@@ -228,10 +228,9 @@ void handler(UART_select device){
     case 0x65:
         reportFW(msg.cmd, device);
         break;
-
-//    case 0x78:
-//        transmit_nyx_consumption(msg.cmd, device);
-//        break;
+    case 0x78:
+    	powerManageCfgSet(0x78);
+        break;
     case 0x80:
         ublox_transmit_rtc(msg.cmd, device);
         break;

@@ -237,5 +237,11 @@ HAL_StatusTypeDef setPowerSaveMode(uint8_t mode);
 HAL_StatusTypeDef UbloxI2CWriteReadPolling(uint16_t DevAddress, uint8_t *TData, uint16_t TDataLen,
 										uint8_t *RData, uint16_t RDataLen, uint32_t Timeout);
 
+HAL_StatusTypeDef powerModeSetupGet(void);
+
+HAL_StatusTypeDef powerManageCfgGet(uint8_t *payload);
+
+HAL_StatusTypeDef powerManageCfgSet(uint8_t maxAckTime);
+
 
 #endif /* SRC_GPS_NEOM9N_H_ */

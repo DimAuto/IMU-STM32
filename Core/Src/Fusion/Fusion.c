@@ -14,7 +14,7 @@
 #include <math.h>
 
 #define SAMPLE_PERIOD (0.0138f)
-#define SAMPLE_RATE (70)
+#define SAMPLE_RATE (20)
 
 const FusionMatrix gyroscopeMisalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 const FusionVector gyroscopeSensitivity = {1.0f, 1.0f, 1.0f};
@@ -37,7 +37,7 @@ void FusionInit(void){
 			.gain = 0.5f,
 			.accelerationRejection = 10.0f,
 			.magneticRejection = 20.0f,
-			.rejectionTimeout = 5 * SAMPLE_RATE, /* 5 seconds */
+			.rejectionTimeout = 3 * SAMPLE_RATE, /* 5 seconds */
 	};
 	FusionAhrsSetSettings(&ahrs, &settings);
 

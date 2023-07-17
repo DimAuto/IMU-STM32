@@ -31,7 +31,8 @@ uint8_t lsm6_bus_init(void)
 {
 
   hi2c2.Instance = I2C2;
-  hi2c2.Init.Timing = 0x00B03FDB;
+//hi2c2.Init.Timing = 0x00B03FDB;
+  hi2c2.Init.Timing = 0x307075B1;
   hi2c2.Init.OwnAddress1 = 0;
   hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -171,38 +172,38 @@ HAL_StatusTypeDef lis3_magn_read(mems_data_t *mems_data){
 
 void debugPrintMEMS(mems_data_t *mems_data){
 	uint8_t text[20] = {0};
-	uart_write_uart4("TS:", 50);
-	memcpy(text,0,10);
-	sprintf(text, "%d-,", mems_data->timestamp);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
-	sprintf(text, "%f,", mems_data->acc_x);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
-	sprintf(text, "%f,", mems_data->acc_y);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
-	sprintf(text, "%f,", mems_data->acc_z);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
-	sprintf(text, "%f,", mems_data->gyro_x);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
-	sprintf(text, "%f,", mems_data->gyro_y);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
-	sprintf(text, "%f,", mems_data->gyro_z);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
+//	uart_write("Raw:", 0, UART_NYX, 50);
+//	memcpy(text,0,20);
+//	sprintf(text, "%d-,", mems_data->timestamp);
+//	uart_write_debug(text, 50);
+//	memcpy(text,0,20);
+//	sprintf(text, "%f,", mems_data->acc_x);
+//	uart_write(text, 0, UART_NYX, 50);
+//	memcpy(text,0,20);
+//	sprintf(text, "%f,", mems_data->acc_y);
+//	uart_write(text, 0, UART_NYX, 50);
+//	memcpy(text,0,20);
+//	sprintf(text, "%f,", mems_data->acc_z);
+//	uart_write(text, 0, UART_NYX, 50);
+//	memcpy(text,0,20);
+//	sprintf(text, "%f,", mems_data->gyro_x);
+//	uart_write(text, 0, UART_NYX, 50);
+//	memcpy(text,0,20);
+//	sprintf(text, "%f,", mems_data->gyro_y);
+//	uart_write(text, 0, UART_NYX, 50);
+//	memcpy(text,0,20);
+//	sprintf(text, "%f,", mems_data->gyro_z);
+//	uart_write(text, 0, UART_NYX, 50);
+//	memcpy(text,0,20);
 	sprintf(text, "%f,", mems_data->magn_x);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
+	uart_write(text, 0, UART_NYX, 50);
+	memcpy(text,0,20);
 	sprintf(text, "%f,", mems_data->magn_y);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
+	uart_write(text, 0, UART_NYX, 50);
+	memcpy(text,0,20);
 	sprintf(text, "%f\r\n", mems_data->magn_z);
-	uart_write_debug(text, 50);
-	memcpy(text,0,10);
+	uart_write(text, 0, UART_NYX, 50);
+	memcpy(text,0,20);
 }
 
 

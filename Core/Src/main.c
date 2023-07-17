@@ -199,9 +199,9 @@ int main(void)
 
   calcHeadingTaskHandle = osThreadNew(calcHeadingTask, NULL, &calcHeadingTask_attributes);
 
-  printOutTaskHandle = osThreadNew(printOutTask, NULL, &printOutTask_attributes);
+//  printOutTaskHandle = osThreadNew(printOutTask, NULL, &printOutTask_attributes);
 
-  getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
+//  getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
 
 //  sendMessageTaskHandle = osThreadNew(sendMessageTask, NULL, &sendMessageTaskHandle_attributes);
 
@@ -254,7 +254,7 @@ void calcHeadingTask(void *argument)
 	    	FusionCalcHeading(&mems_data, &euler);
 	    	osMessageQueuePut(outputQueueHandle, &euler, 0U, 5U);
 	    }
-		osDelay(30);
+		osDelay(50);
 	}
 }
 
@@ -267,7 +267,7 @@ void readMemsTask(void *argument)
 		tick_gyro(&mems_data);
 		osMutexRelease(i2cMutex);
 		osMessageQueuePut(memsQueueHandle, &mems_data, 0U, 5U);
-		osDelay(10);
+		osDelay(30);
 	}
 }
 
