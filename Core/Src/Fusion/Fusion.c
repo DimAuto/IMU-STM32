@@ -13,8 +13,8 @@
 #include "../helpers.h"
 #include <math.h>
 
-#define SAMPLE_PERIOD (0.0138f)
-#define SAMPLE_RATE (20)
+#define SAMPLE_PERIOD (0.035f)
+#define SAMPLE_RATE (28)
 
 const FusionMatrix gyroscopeMisalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 const FusionVector gyroscopeSensitivity = {1.0f, 1.0f, 1.0f};
@@ -22,8 +22,12 @@ const FusionVector gyroscopeOffset = {0.0f, 0.0f, 0.0f};
 const FusionMatrix accelerometerMisalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 const FusionVector accelerometerSensitivity = {1.0f, 1.0f, 1.0f};
 const FusionVector accelerometerOffset = {0.0f, 0.0f, 0.0f};
-const FusionMatrix softIronMatrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
-const FusionVector hardIronOffset = {0.0f, 0.0f, 0.0f};
+//const FusionMatrix softIronMatrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+//const FusionVector hardIronOffset = {0.0f, 0.0f, 0.0f};
+
+const FusionMatrix softIronMatrix = {0.1835f, 0.0053f, -0.0027f, 0.0053f, 0.1878, -0.0007f, -0.0027f, -0.0007f, 0.1786f};
+const FusionVector hardIronOffset = {0.9485f, 0.0f, 80.0f};
+
 
 FusionAhrs ahrs;
 FusionOffset offset;
@@ -37,10 +41,9 @@ void FusionInit(void){
 			.gain = 0.5f,
 			.accelerationRejection = 10.0f,
 			.magneticRejection = 20.0f,
-			.rejectionTimeout = 3 * SAMPLE_RATE, /* 5 seconds */
+			.rejectionTimeout = 5 * SAMPLE_RATE, /* 5 seconds */
 	};
 	FusionAhrsSetSettings(&ahrs, &settings);
-
 }
 
 /* Calculate angle based only on Accelerometer and gyroscope.*/
@@ -49,8 +52,16 @@ void FusionCalcAngle(mems_data_t *memsData, FusionEuler *output_angles){
 	const FusionVector accelerometer = {memsData->acc_x, memsData->acc_y, memsData->acc_z};
 
 	FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, SAMPLE_PERIOD);
-
 	*output_angles = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
+	if (output_angles->angle.yaw < 0){
+		output_angles->angle.yaw += 360;
+	}
+	if (output_angles->angle.roll < 0){
+		output_angles->angle.roll += 360;
+	}
+	if (output_angles->angle.pitch < 0){
+		output_angles->angle.pitch += 360;
+	}
 	//	const FusionVect = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
 }
 
@@ -76,7 +87,7 @@ void FusionCalcHeading(mems_data_t *memsData, FusionEuler *output_angles){
 
 
 	// Update gyroscope AHRS algorithm
-	FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, deltaTime);
+	FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, 0.035);
 
 	// Print algorithm outputs
 	*output_angles = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));

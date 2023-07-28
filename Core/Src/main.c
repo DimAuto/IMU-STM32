@@ -197,9 +197,9 @@ int main(void)
 
   readMemsTaskHandle = osThreadNew(readMemsTask, NULL, &readMemsTask_attributes);
 
-  calcHeadingTaskHandle = osThreadNew(calcHeadingTask, NULL, &calcHeadingTask_attributes);
+//  calcHeadingTaskHandle = osThreadNew(calcHeadingTask, NULL, &calcHeadingTask_attributes);
 
-//  printOutTaskHandle = osThreadNew(printOutTask, NULL, &printOutTask_attributes);
+  printOutTaskHandle = osThreadNew(printOutTask, NULL, &printOutTask_attributes);
 
 //  getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
 
@@ -254,19 +254,23 @@ void calcHeadingTask(void *argument)
 	    	FusionCalcHeading(&mems_data, &euler);
 	    	osMessageQueuePut(outputQueueHandle, &euler, 0U, 5U);
 	    }
-		osDelay(50);
+		osDelay(30);
 	}
 }
 
 void readMemsTask(void *argument)
 {
 	mems_data_t mems_data;
+	FusionEuler euler;
+	FusionInit();
 	for(;;)
 	{
-		osMutexAcquire(i2cMutex, osWaitForever);
+//		osMutexAcquire(i2cMutex, osWaitForever);
 		tick_gyro(&mems_data);
-		osMutexRelease(i2cMutex);
-		osMessageQueuePut(memsQueueHandle, &mems_data, 0U, 5U);
+		FusionCalcHeading(&mems_data, &euler);
+//		osMutexRelease(i2cMutex);
+		osMessageQueuePut(outputQueueHandle, &euler, 0U, 5U);
+//		osMessageQueuePut(memsQueueHandle, &mems_data, 0U, 5U);
 		osDelay(30);
 	}
 }
@@ -289,7 +293,7 @@ void printOutTask(void *argument)
 			osMutexRelease(debugUartMutex);
 			memset(text,0,sizeof(text));
 		}
-		osDelay(100);
+		osDelay(70);
 	}
 }
 

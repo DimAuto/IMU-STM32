@@ -16,7 +16,6 @@
 static uint8_t TOKEN = 0;
 static void calcChecksum(void);
 static uint8_t calcDataSize(uint8_t *data, uint8_t len);
-static void jump_BSL(void);
 static void init_message_t(void);
 static void handler(UART_select device);
 

@@ -25,8 +25,8 @@ uint8_t gps_data_backup_flag = 0;   //Flag to enable gps data backup only on boo
 
 uint8_t ublox_i2c_bus_init(void){
 	hi2c1.Instance = I2C1;
-//	hi2c1.Init.Timing = 0x00B03FDB;
-	hi2c1.Init.Timing = 0x307075B1;
+//	hi2c1.Init.Timing = 0x00B03FDB; 400KB i2c speed
+	hi2c1.Init.Timing = 0x307075B1;	//100KB i2c speed
 	hi2c1.Init.OwnAddress1 = 0;
 	hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
 	hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;

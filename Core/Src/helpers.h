@@ -29,3 +29,6 @@ long coorsAtol(char *coors, char sign);
 long altAtol(char *str);
 
 #endif /* SRC_CORE_HELPERS_H_ */
+
+
+
