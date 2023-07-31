@@ -35,6 +35,7 @@ osThreadId_t printOutTaskHandle;
 osThreadId_t getCoorsTaskHandle;
 osThreadId_t readMessageTaskHandle;
 osThreadId_t sendMessageTaskHandle;
+osThreadId_t gyroCalibrationTaskHandle;
 
 
 osSemaphoreId_t binSemHandle;
@@ -84,6 +85,12 @@ const osThreadAttr_t sendMessageTaskHandle_attributes = {
   .priority = (osPriority_t) osPriorityHigh,
 };
 
+const osThreadAttr_t gyroCalibrationTaskHandle_attributes = {
+  .name = "gyro_calibration",
+  .stack_size = 128 * 8,
+  .priority = (osPriority_t) osPriorityHigh,
+};
+
 
 /* Definitions for myMutex01 */
 osMutexId_t debugUartMutex;
@@ -127,6 +134,7 @@ void printOutTask(void *argument);
 void getCoorsTask(void *argument);
 void readMessageTask(void *argument);
 void sendMessageTask(void *argument);
+void gyroCalibrationTask(void *argument);
 
 /**
   * @brief  The application entry point.
@@ -207,6 +215,11 @@ int main(void)
 
   readMessageTaskHandle = osThreadNew(readMessageTask, NULL, &readMessageTaskHandle_attributes);
 
+  gyroCalibrationTaskHandle = osThreadNew(gyroCalibrationTask, NULL, &gyroCalibrationTaskHandle_attributes);
+
+  /*Suspend the gyro-calibration task*/
+  osThreadSuspend(gyroCalibrationTaskHandle);
+
   /* Start scheduler */
   osKernelStart();
   /* We should never get here as control is now taken by the scheduler */
@@ -267,11 +280,11 @@ void readMemsTask(void *argument)
 	{
 //		osMutexAcquire(i2cMutex, osWaitForever);
 		tick_gyro(&mems_data);
-		FusionCalcHeading(&mems_data, &euler);
+		FusionCalcAngle(&mems_data, &euler);
 //		osMutexRelease(i2cMutex);
-		osMessageQueuePut(outputQueueHandle, &euler, 0U, 5U);
+		osMessageQueuePut(outputQueueHandle, &euler, 0U, 0U);
 //		osMessageQueuePut(memsQueueHandle, &mems_data, 0U, 5U);
-		osDelay(30);
+		osDelay(20);
 	}
 }
 
@@ -328,11 +341,21 @@ void readMessageTask(void *argument){
 	}
 }
 
-//void sendMessageTask(void *argument){
-//	for(;;){
-//		osDelay(500);
-//	}
-//}
+void gyroCalibrationTask(void *argument){
+	mems_data_t mems_data;
+	osThreadSuspend(readMemsTaskHandle);
+	osThreadSuspend(printOutTaskHandle);
+	uart_write_debug("Gyro Calibration: Hold the device still\r\n", 50);
+	for(;;){
+		if (gyro_offset_calculation(&mems_data) == 0){
+			osThreadResume(readMemsTaskHandle);
+			osThreadResume(printOutTaskHandle);
+			uart_write_debug("Gyro Calibration: Finished!\r\n", 50);
+			osThreadSuspend(gyroCalibrationTaskHandle);
+		}
+		osDelay(5);
+	}
+}
 
 
 //////////// SYSTEM CONFIG ///////////////////

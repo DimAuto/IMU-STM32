@@ -59,17 +59,29 @@
 #define OUT_Z_H_MG			0x2D
 
 
+typedef struct{
+	float gyro_x;
+	float gyro_y;
+	float gyro_z;
+}gyro_data_t;
+
 
 typedef struct{
-    float gyro_x;
-    float gyro_y;
-    float gyro_z;
-    float acc_x;
-    float acc_y;
-    float acc_z;
+	float acc_x;
+	float acc_y;
+	float acc_z;
+}acc_data_t;
+
+typedef struct{
     float magn_x;
     float magn_y;
     float magn_z;
+}magn_data_t;
+
+typedef struct{
+	gyro_data_t gyro;
+	acc_data_t acc;
+	magn_data_t magn;
     int	timestamp;
 }mems_data_t;
 
@@ -92,5 +104,9 @@ HAL_StatusTypeDef lsm6_acc_read(mems_data_t *mems_data);
 HAL_StatusTypeDef lis3_magn_read(mems_data_t *mems_data);
 
 void tick_gyro(mems_data_t *mems_data);
+
+uint8_t gyro_offset_calculation(mems_data_t *mems_data);
+
+void setGyroOffset(gyro_data_t values);
 
 #endif /* SRC_LSM6_GYRO_H_ */

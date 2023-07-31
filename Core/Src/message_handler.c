@@ -19,6 +19,8 @@ static uint8_t calcDataSize(uint8_t *data, uint8_t len);
 static void init_message_t(void);
 static void handler(UART_select device);
 
+extern osThreadId_t gyroCalibrationTaskHandle;
+
 uint8_t flag_connected_toIris = 0;
 
 static uint8_t message_d[25]={0};
@@ -238,6 +240,9 @@ void handler(UART_select device){
         HAL_Delay(500);
 //        gpio_setGNSS_RESET(PIN_HIGH);
         break;
+    case 0xC0:
+    	osThreadResume(gyroCalibrationTaskHandle);
+    	break;
     default:
         break;
     }
