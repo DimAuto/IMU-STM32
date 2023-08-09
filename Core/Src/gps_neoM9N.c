@@ -16,6 +16,9 @@ static void calcChecksum(messageCFG_t *msg);
 I2C_HandleTypeDef hi2c1;
 
 //gps_data_t *gps_data;
+static uint8_t powerModesetPld[44] = {0x01, 0x06, 0x78, 0x00, 0x0E, 0x10, 0x42, 0x01, 0x10, 0x27, 0x00, 0x00, 0x10, 0x27,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x4F, 0xC1, 0x03, 0x00,
+		0x86, 0x02, 0x00, 0x00, 0xFE, 0x00, 0x00, 0x00, 0x64, 0x40, 0x01, 0x00};
 static messageCFG_t config_message = {UBX_SYNCH_2, 0, 0, 0, 0, 0, 1, 0, 0, SFE_UBLOX_PACKET_VALIDITY_NOT_DEFINED, SFE_UBLOX_PACKET_VALIDITY_NOT_DEFINED};
 static gps_data_t gps_data;
 static uint8_t gps_loss_count = 0;
@@ -107,6 +110,7 @@ HAL_StatusTypeDef ubloxInit(void){
     if (ret != HAL_OK)return ret;
     ret = configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GGA, NMEA_GGA_RATE, COM_PORT_I2C);
     if (ret != HAL_OK)return ret;
+    powerManageCfgSet(120);
 }
 
 HAL_StatusTypeDef ubloxNmeaGGA_set_refresh_rate(uint8_t seconds){
@@ -233,6 +237,7 @@ static void calcChecksum(messageCFG_t *msg){
 
 HAL_StatusTypeDef sendI2Cmessage(void){
     uint8_t message[60] = {0};
+    uint8_t rx_message[10] = {0};
     uint8_t len = config_message.len + 8;
     message[0] = UBX_SYNCH_1;
     message[1] = UBX_SYNCH_2;
@@ -246,7 +251,15 @@ HAL_StatusTypeDef sendI2Cmessage(void){
     }
     message[6+i] = config_message.checksumA;
     message[7+i] = config_message.checksumB;
-    return HAL_I2C_Master_Transmit(&hi2c1, UBLOX_M9N, message, len, 50);
+    if (HAL_I2C_Master_Transmit(&hi2c1, UBLOX_M9N, message, len, 50) == HAL_OK){
+
+    	if (HAL_I2C_Master_Receive(&hi2c1, UBLOX_M9N, rx_message, 10, 100) == HAL_OK){
+    		if (rx_message[3] == 1){
+    			return HAL_OK;
+    		}
+    	}
+    }
+    return HAL_ERROR;
 }
 
 HAL_StatusTypeDef setPortOutput(uint8_t portSelect, uint8_t streamSettings){
@@ -460,21 +473,10 @@ HAL_StatusTypeDef powerManageCfgGet(uint8_t *payload){
 
 
 HAL_StatusTypeDef powerManageCfgSet(uint8_t maxAckTime){
-    uint8_t payloadCfg[48] = {0};
-    uint8_t payload[56] = {0};
-    uint8_t i;
-    uint8_t res = HAL_OK;
-    res = powerManageCfgGet(payload);
-//    if ( res != HAL_OK) return res;
-    for(i=0;i<=48;i++){
-    	payloadCfg[i] = payload[i+6];
-    }
     config_message.cls = UBX_CLASS_CFG;
     config_message.id =  UBX_CFG_PM2;
-    config_message.len = 48;
-    payloadCfg[2] = maxAckTime;
-    payloadCfg[2] = 67;
-    config_message.payload = payloadCfg;
+    config_message.len = 44;
+    config_message.payload = powerModesetPld;
     calcChecksum(&config_message);
     return sendI2Cmessage();
 }

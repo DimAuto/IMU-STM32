@@ -59,8 +59,8 @@ void FlashReadData (uint32_t StartPageAddress, uint32_t *RxBuf, uint16_t numbero
 	while (1)
 	{
 
-		*RxBuf = *(__IO uint32_t *)StartPageAddress;
-		StartPageAddress += 4;
+		*RxBuf = *(__IO uint64_t *)StartPageAddress;
+		StartPageAddress += 8;
 		RxBuf++;
 		if (!(numberofwords--)) break;
 	}
