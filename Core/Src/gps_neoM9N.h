@@ -186,9 +186,16 @@ typedef struct{
     sfe_ublox_packet_validity_e classAndIDmatch;
 }messageCFG_t;
 
+typedef enum{
+	NACK,
+	ACK,
+	TRANS_ERROR,
+	RECEIVE_ERROR,
+	TRANS_OK
+}UBLOX_transResult;
 
 
-HAL_StatusTypeDef ubloxInit(void);
+UBLOX_transResult ubloxInit(void);
 
 uint8_t ublox_i2c_bus_init(void);
 
@@ -198,33 +205,33 @@ uint16_t ubloxGetBytes(uint8_t *buf);
 
 uint8_t ubloxRead(void);
 
-HAL_StatusTypeDef ubloxNmeaGGA_set_refresh_rate(uint8_t seconds);
+UBLOX_transResult ubloxNmeaGGA_set_refresh_rate(uint8_t seconds);
 
-HAL_StatusTypeDef setPortOutput(uint8_t portSelect, uint8_t streamSettings);
+UBLOX_transResult setPortOutput(uint8_t portSelect, uint8_t streamSettings);
 
-HAL_StatusTypeDef configureNMEA(uint8_t msgClass, uint8_t msgID, uint8_t rate, uint8_t portID);
+UBLOX_transResult configureNMEA(uint8_t msgClass, uint8_t msgID, uint8_t rate, uint8_t portID);
 
-HAL_StatusTypeDef ubloxSaveConfiguration(void);
+UBLOX_transResult ubloxSaveConfiguration(void);
 
-HAL_StatusTypeDef ubloxClearConfiguration(void);
+UBLOX_transResult ubloxClearConfiguration(void);
 
-HAL_StatusTypeDef ubloxLoadConfiguration(void);
+UBLOX_transResult ubloxLoadConfiguration(void);
 
-HAL_StatusTypeDef getPortSettings(uint8_t portID, uint8_t *rx_mes);
+UBLOX_transResult getPortSettings(uint8_t portID, uint8_t *rx_mes);
 
-HAL_StatusTypeDef sendI2Cmessage(void);
+UBLOX_transResult sendI2Cmessage(void);
 
-HAL_StatusTypeDef powerOffWithInterrupt(uint32_t durationInMs, uint32_t wakeupSources);
+UBLOX_transResult powerOffWithInterrupt(uint32_t durationInMs, uint32_t wakeupSources);
 
-HAL_StatusTypeDef getMessageSettings(uint8_t msgClass, uint8_t msgID, uint8_t *rx_mes);
+UBLOX_transResult getMessageSettings(uint8_t msgClass, uint8_t msgID, uint8_t *rx_mes);
 
 uint8_t parseNMEA(void);
 
-HAL_StatusTypeDef createBackup(void);
+UBLOX_transResult createBackup(void);
 
-HAL_StatusTypeDef restoreBackupData(void);
+UBLOX_transResult restoreBackupData(void);
 
-HAL_StatusTypeDef resetReceiver(uint16_t startSelect, uint8_t start_stop);
+UBLOX_transResult resetReceiver(uint16_t startSelect, uint8_t start_stop);
 
 void ublox_transmit_message(uint8_t cmd, UART_select device);
 
@@ -232,16 +239,16 @@ void init_gps_data(void);
 
 void ublox_transmit_rtc(uint8_t cmd, UART_select device);
 
-HAL_StatusTypeDef setPowerSaveMode(uint8_t mode);
+UBLOX_transResult setPowerSaveMode(uint8_t mode);
 
-HAL_StatusTypeDef UbloxI2CWriteReadPolling(uint16_t DevAddress, uint8_t *TData, uint16_t TDataLen,
+UBLOX_transResult UbloxI2CWriteReadPolling(uint16_t DevAddress, uint8_t *TData, uint16_t TDataLen,
 										uint8_t *RData, uint16_t RDataLen, uint32_t Timeout);
 
-HAL_StatusTypeDef powerModeSetupGet(void);
+UBLOX_transResult powerModeSetupGet(void);
 
-HAL_StatusTypeDef powerManageCfgGet(uint8_t *payload);
+UBLOX_transResult powerManageCfgGet(uint8_t *payload);
 
-HAL_StatusTypeDef powerManageCfgSet(uint8_t maxAckTime);
+UBLOX_transResult powerManageCfgSet(uint8_t maxAckTime);
 
 
 #endif /* SRC_GPS_NEOM9N_H_ */

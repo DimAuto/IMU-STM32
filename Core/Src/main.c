@@ -207,9 +207,9 @@ int main(void)
 
 //  calcHeadingTaskHandle = osThreadNew(calcHeadingTask, NULL, &calcHeadingTask_attributes);
 
-  printOutTaskHandle = osThreadNew(printOutTask, NULL, &printOutTask_attributes);
+//  printOutTaskHandle = osThreadNew(printOutTask, NULL, &printOutTask_attributes);
 
-//  getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
+  getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
 
 //  sendMessageTaskHandle = osThreadNew(sendMessageTask, NULL, &sendMessageTaskHandle_attributes);
 
