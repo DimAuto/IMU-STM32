@@ -12,6 +12,7 @@
 #include <time.h>
 #include "../helpers.h"
 #include <math.h>
+#include "cmsis_os2.h"
 
 #define SAMPLE_PERIOD (0.034f)
 #define SAMPLE_RATE (50)
@@ -27,6 +28,8 @@ const FusionVector accelerometerOffset = {0.0f, 0.0f, 0.0f};
 
 const FusionMatrix softIronMatrix = {0.1835f, 0.0053f, -0.0027f, 0.0053f, 0.1878, -0.0007f, -0.0027f, -0.0007f, 0.1786f};
 const FusionVector hardIronOffset = {0.9485f, 0.0f, 80.0f};
+
+static uint32_t prv_tick = 0;
 
 
 FusionAhrs ahrs;
@@ -58,8 +61,9 @@ void FusionCalcAngle(mems_data_t *memsData, FusionEuler *output_angles){
 	const FusionVector accelerometer = {memsData->acc.acc_x, memsData->acc.acc_y, memsData->acc.acc_z};
 
 	gyroscope = FusionCalibrationInertial(gyroscope, gyroscopeMisalignment, gyroscopeSensitivity, gyroscopeOffset);
-
-	FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, SAMPLE_PERIOD);
+	float delta = (float)(osKernelGetTickCount() - prv_tick) / 1000.0f;
+	FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, delta);
+	prv_tick = osKernelGetTickCount();
 	*output_angles = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
 	if (output_angles->angle.yaw < 0){
 		output_angles->angle.yaw += 360;

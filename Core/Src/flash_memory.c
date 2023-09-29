@@ -8,6 +8,10 @@
 
 #include "flash_memory.h"
 
+uint8_t bytes_temp[4];
+
+
+
 
 static uint32_t GetPage(uint32_t Address)
 {
@@ -18,7 +22,6 @@ static uint32_t GetPage(uint32_t Address)
 		  return (FLASH_BASE + FLASH_PAGE_SIZE*indx);
 	  }
   }
-
   return 0;
 }
 
@@ -65,8 +68,6 @@ void FlashReadData (uint32_t StartPageAddress, uint32_t *RxBuf, uint16_t numbero
 		if (!(numberofwords--)) break;
 	}
 }
-
-
 
 
 uint32_t FlashWriteData (uint32_t StartPageAddress, uint32_t *Data, uint16_t numberofwords)
@@ -116,6 +117,24 @@ uint32_t FlashWriteData (uint32_t StartPageAddress, uint32_t *Data, uint16_t num
 	   HAL_FLASH_Lock();
 
 	   return 0;
+}
+
+void Flash_Write_NUM (uint32_t StartSectorAddress, float Num)
+{
+	float2Bytes(bytes_temp, Num);
+
+	FlashWriteData (StartSectorAddress, (uint32_t *)bytes_temp, 1);
+}
+
+
+float Flash_Read_NUM (uint32_t StartSectorAddress)
+{
+	uint8_t buffer[4];
+	float value;
+
+	FlashReadData(StartSectorAddress, (uint32_t *)buffer, 1);
+	value = Bytes2float(buffer);
+	return value;
 }
 
 void Convert_To_Str (uint32_t *Data, char *Buf)

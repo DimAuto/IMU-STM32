@@ -11,6 +11,7 @@
 #include "lsm6_gyro.h"
 #include "helpers.h"
 #include "uart.h"
+#include "flash_memory.h"
 
 // I2C object
 I2C_HandleTypeDef hi2c2;
@@ -186,6 +187,10 @@ uint8_t gyro_offset_calculation(mems_data_t *mems_data){
 		gyro_mean.gyro_z = gyro_sum.gyro_z / gyro_offset_counter;
 		setGyroOffset(gyro_mean);
 		gyro_offset_counter = 0;
+		Flash_Write_NUM(GYRO_OFFSET_X_ADDR, gyro_mean.gyro_x);
+		Flash_Write_NUM(GYRO_OFFSET_Y_ADDR, gyro_mean.gyro_y);
+		Flash_Write_NUM(GYRO_OFFSET_Z_ADDR, gyro_mean.gyro_z);
+		float temp = Flash_Read_NUM(GYRO_OFFSET_X_ADDR);
 		return 0;
 	}
 	return 1;
@@ -199,7 +204,6 @@ void debugPrintMEMS(mems_data_t *mems_data){
 //	uart_write_debug(text, 50);
 //	memcpy(text,0,20);
 //	sprintf(text, "%d,", mems_data->acc_x);
-
 //	memcpy(text,0,20);
 //	sprintf(text, "%d,", mems_data->acc_y);
 //	uart_write(text, 0, UART_NYX, 50);

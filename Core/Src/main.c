@@ -207,9 +207,9 @@ int main(void)
 
 //  calcHeadingTaskHandle = osThreadNew(calcHeadingTask, NULL, &calcHeadingTask_attributes);
 
-//  printOutTaskHandle = osThreadNew(printOutTask, NULL, &printOutTask_attributes);
+  printOutTaskHandle = osThreadNew(printOutTask, NULL, &printOutTask_attributes);
 
-  getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
+//  getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
 
 //  sendMessageTaskHandle = osThreadNew(sendMessageTask, NULL, &sendMessageTaskHandle_attributes);
 
@@ -345,15 +345,16 @@ void gyroCalibrationTask(void *argument){
 	mems_data_t mems_data;
 	osThreadSuspend(readMemsTaskHandle);
 	osThreadSuspend(printOutTaskHandle);
+	osDelay(100);
 	uart_write_debug("Gyro Calibration: Hold the device still\r\n", 50);
 	for(;;){
 		if (gyro_offset_calculation(&mems_data) == 0){
+			uart_write_debug("Gyro Calibration: Finished!\r\n", 50);
 			osThreadResume(readMemsTaskHandle);
 			osThreadResume(printOutTaskHandle);
-			uart_write_debug("Gyro Calibration: Finished!\r\n", 50);
 			osThreadSuspend(gyroCalibrationTaskHandle);
 		}
-		osDelay(5);
+		osDelay(20);
 	}
 }
 
