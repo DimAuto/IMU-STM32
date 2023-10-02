@@ -151,6 +151,8 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
 
+  FusionInit();
+
   MX_USART1_UART_Init();
 
   MX_UART4_Init();
@@ -275,7 +277,6 @@ void readMemsTask(void *argument)
 {
 	mems_data_t mems_data;
 	FusionEuler euler;
-	FusionInit();
 	for(;;)
 	{
 //		osMutexAcquire(i2cMutex, osWaitForever);
@@ -354,7 +355,7 @@ void gyroCalibrationTask(void *argument){
 			osThreadResume(printOutTaskHandle);
 			osThreadSuspend(gyroCalibrationTaskHandle);
 		}
-		osDelay(20);
+		osDelay(10);
 	}
 }
 

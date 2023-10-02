@@ -13,6 +13,7 @@
 #include "../helpers.h"
 #include <math.h>
 #include "cmsis_os2.h"
+#include "../lsm6_gyro.h"
 
 #define SAMPLE_PERIOD (0.034f)
 #define SAMPLE_RATE (50)
@@ -43,16 +44,19 @@ void setGyroOffset(gyro_data_t values){
 
 /* Initialize Fusion algorithm. */
 void FusionInit(void){
+	gyro_data_t values = {0};
 	FusionOffsetInitialise(&offset, SAMPLE_RATE);
 	FusionAhrsInitialise(&ahrs);
 	const FusionAhrsSettings settings = {
 			.convention = FusionConventionNwu,
 			.gain = 0.5f,
-			.accelerationRejection = 0.0f,
-			.magneticRejection = 20.0f,
+			.accelerationRejection = 10.0f,
+			.magneticRejection = 30.0f,
 			.rejectionTimeout = 5 * SAMPLE_RATE, /* 5 seconds */
 	};
 	FusionAhrsSetSettings(&ahrs, &settings);
+	Flash_Read_CalTable(GYRO_OFFSET_ADDR, &values);
+	setGyroOffset(values);
 }
 
 /* Calculate angle based only on Accelerometer and gyroscope.*/

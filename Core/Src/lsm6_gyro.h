@@ -58,9 +58,8 @@
 #define OUT_Z_L_MG			0x2C
 #define OUT_Z_H_MG			0x2D
 
-#define GYRO_OFFSET_X_ADDR	0x08010000
-#define GYRO_OFFSET_Y_ADDR	0x08101000
-#define GYRO_OFFSET_Z_ADDR	0x08102000
+#define GYRO_OFFSET_ADDR	0x080FD000
+
 
 
 typedef struct{

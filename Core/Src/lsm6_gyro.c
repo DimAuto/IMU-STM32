@@ -187,10 +187,7 @@ uint8_t gyro_offset_calculation(mems_data_t *mems_data){
 		gyro_mean.gyro_z = gyro_sum.gyro_z / gyro_offset_counter;
 		setGyroOffset(gyro_mean);
 		gyro_offset_counter = 0;
-		Flash_Write_NUM(GYRO_OFFSET_X_ADDR, gyro_mean.gyro_x);
-		Flash_Write_NUM(GYRO_OFFSET_Y_ADDR, gyro_mean.gyro_y);
-		Flash_Write_NUM(GYRO_OFFSET_Z_ADDR, gyro_mean.gyro_z);
-		float temp = Flash_Read_NUM(GYRO_OFFSET_X_ADDR);
+		Flash_Write_CalTable(GYRO_OFFSET_ADDR, &gyro_mean);
 		return 0;
 	}
 	return 1;
