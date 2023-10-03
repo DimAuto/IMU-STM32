@@ -284,8 +284,7 @@ void readMemsTask(void *argument)
 		FusionCalcAngle(&mems_data, &euler);
 //		osMutexRelease(i2cMutex);
 		osMessageQueuePut(outputQueueHandle, &euler, 0U, 0U);
-//		osMessageQueuePut(memsQueueHandle, &mems_data, 0U, 5U);
-		osDelay(20);
+		osDelay(MEMS_SR);
 	}
 }
 

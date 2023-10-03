@@ -14,13 +14,14 @@
 #include <math.h>
 #include "cmsis_os2.h"
 #include "../lsm6_gyro.h"
+#include "../../Inc/main.h"
 
 #define SAMPLE_PERIOD (0.034f)
-#define SAMPLE_RATE (50)
+#define SAMPLE_RATE (100)
 
 const FusionMatrix gyroscopeMisalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 const FusionVector gyroscopeSensitivity = {1.0f, 1.0f, 1.0f};
-FusionVector gyroscopeOffset = {0.0f, 0.0f, 0.0f};
+static FusionVector gyroscopeOffset = {0.0f, 0.0f, 0.0f};
 const FusionMatrix accelerometerMisalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 const FusionVector accelerometerSensitivity = {1.0f, 1.0f, 1.0f};
 const FusionVector accelerometerOffset = {0.0f, 0.0f, 0.0f};
@@ -31,6 +32,9 @@ const FusionMatrix softIronMatrix = {0.1835f, 0.0053f, -0.0027f, 0.0053f, 0.1878
 const FusionVector hardIronOffset = {0.9485f, 0.0f, 80.0f};
 
 static uint32_t prv_tick = 0;
+
+static clock_t timestamp = 0;
+static clock_t previousTimestamp = 0;
 
 
 FusionAhrs ahrs;
@@ -51,7 +55,7 @@ void FusionInit(void){
 			.convention = FusionConventionNwu,
 			.gain = 0.5f,
 			.accelerationRejection = 10.0f,
-			.magneticRejection = 30.0f,
+			.magneticRejection = 20.0f,
 			.rejectionTimeout = 5 * SAMPLE_RATE, /* 5 seconds */
 	};
 	FusionAhrsSetSettings(&ahrs, &settings);
@@ -63,11 +67,24 @@ void FusionInit(void){
 void FusionCalcAngle(mems_data_t *memsData, FusionEuler *output_angles){
 	FusionVector gyroscope = {memsData->gyro.gyro_x, memsData->gyro.gyro_y, memsData->gyro.gyro_z};
 	const FusionVector accelerometer = {memsData->acc.acc_x, memsData->acc.acc_y, memsData->acc.acc_z};
-
-	gyroscope = FusionCalibrationInertial(gyroscope, gyroscopeMisalignment, gyroscopeSensitivity, gyroscopeOffset);
+	gyroscope = FusionVectorSubtract(gyroscope, gyroscopeOffset);
+#ifndef GYRO_TS
 	float delta = (float)(osKernelGetTickCount() - prv_tick) / 1000.0f;
-	FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, delta);
 	prv_tick = osKernelGetTickCount();
+#else
+	float delta = (float) ( memsData->timestamp - previousTimestamp) * (float) GYRO_TIMESTAMP_LSB_USEC / (float) 1000000;
+	previousTimestamp = memsData->timestamp;
+#endif
+	delta += 0.002; //Add a const offset.
+	if ((delta >= 0.010) && (delta <= 0.016)){
+	FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, delta);
+	}
+
+
+//	uint8_t text[20] = {0};
+//	sprintf(text, "%f\r\n,", delta);
+//	uart_write_debug(text, 20);
+
 	*output_angles = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
 	if (output_angles->angle.yaw < 0){
 		output_angles->angle.yaw += 360;
@@ -83,7 +100,6 @@ void FusionCalcAngle(mems_data_t *memsData, FusionEuler *output_angles){
 
 /* Calculate heading based on all three sensors.*/
 void FusionCalcHeading(mems_data_t *memsData, FusionEuler *output_angles){
-	const clock_t timestamp = memsData->timestamp; // timestamp taken from LSM6DRX gyroscope.
 	FusionVector gyroscope = {memsData->gyro.gyro_x, memsData->gyro.gyro_y, memsData->gyro.gyro_z};
 	FusionVector accelerometer = {memsData->acc.acc_x, memsData->acc.acc_y, memsData->acc.acc_z};
 	FusionVector magnetometer = {memsData->magn.magn_x, memsData->magn.magn_y, memsData->magn.magn_z}; // replace this with actual magnetometer data in arbitrary units
@@ -97,13 +113,11 @@ void FusionCalcHeading(mems_data_t *memsData, FusionEuler *output_angles){
 	gyroscope = FusionOffsetUpdate(&offset, gyroscope);
 
 	// Calculate delta time (in seconds) to account for gyroscope sample clock error
-	static clock_t previousTimestamp;
-	const float deltaTime = (float) (timestamp - previousTimestamp) / (float) CLOCKS_PER_SEC;
-	previousTimestamp = timestamp;
 
-
+	float deltaTime = (float) ( memsData->timestamp - previousTimestamp) * (float) GYRO_TIMESTAMP_LSB_USEC / (float) 1000000;
 	// Update gyroscope AHRS algorithm
-	FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, 0.014);
+	FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, deltaTime);
+	previousTimestamp = timestamp;
 
 	// Print algorithm outputs
 	*output_angles = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));

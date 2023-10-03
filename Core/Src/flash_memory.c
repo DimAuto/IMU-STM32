@@ -7,6 +7,7 @@
 
 
 #include "flash_memory.h"
+#include "uart.h"
 //#include "Fusion/Fusion.h"
 
 
@@ -87,7 +88,7 @@ uint32_t FlashWriteData (uint32_t StartPageAddress, uint64_t *Data, uint16_t num
 	  uint32_t EndPage = GetPage(EndPageAdress);
 
 	   /* Fill EraseInit structure*/
-	   EraseInitStruct.Banks = FLASH_BANK_1;
+	   EraseInitStruct.Banks = FLASH_BANK_2;
 	   EraseInitStruct.TypeErase   = FLASH_TYPEERASE_PAGES;
 	   EraseInitStruct.Page = ((StartPage - FLASH_BASE) / FLASH_PAGE_SIZE) + 1;
 	   EraseInitStruct.NbPages = ((EndPage - StartPage)/FLASH_PAGE_SIZE) + 1;
@@ -95,7 +96,9 @@ uint32_t FlashWriteData (uint32_t StartPageAddress, uint64_t *Data, uint16_t num
 	   if (HAL_FLASHEx_Erase(&EraseInitStruct, &PAGEError) != HAL_OK)
 	   {
 	     /*Error occurred while page erase.*/
+		   uart_write_debug("Failed to erase flash\r\n",UART_NYX);
 		  return HAL_FLASH_GetError ();
+
 	   }
 
 	   /* Program the user Flash area word by word*/
@@ -110,6 +113,7 @@ uint32_t FlashWriteData (uint32_t StartPageAddress, uint64_t *Data, uint16_t num
 	     else
 	     {
 	       /* Error occurred while writing data in Flash memory*/
+	    	 uart_write_debug("Failed to write flash\r\n",UART_NYX);
 	    	 return HAL_FLASH_GetError ();
 	     }
 	   }
@@ -117,7 +121,6 @@ uint32_t FlashWriteData (uint32_t StartPageAddress, uint64_t *Data, uint16_t num
 	   /* Lock the Flash to disable the flash control register access (recommended
 	      to protect the FLASH memory against possible unwanted operation) *********/
 	   HAL_FLASH_Lock();
-
 	   return 0;
 }
 
@@ -163,7 +166,7 @@ uint32_t Flash_Write_CalTable (uint32_t StartSectorAddress, gyro_data_t *data)
 		}
 		v+=4;
 	}
-	res = FlashWriteData (StartSectorAddress, (uint64_t *)bytes_temp, 2);
+	res = FlashWriteData (StartSectorAddress, (uint64_t *)bytes_temp, 3);
 	return res;
 }
 

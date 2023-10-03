@@ -23,6 +23,9 @@ extern "C" {
 #include "FusionOffset.h"
 
 
+#define GYRO_TIMESTAMP_LSB_USEC 25
+
+
 void FusionInit(void);
 
 void FusionCalcAngle(mems_data_t *memsData, FusionEuler *output_angles);

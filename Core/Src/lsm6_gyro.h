@@ -57,6 +57,7 @@
 #define OUT_Y_H_MG			0x2B
 #define OUT_Z_L_MG			0x2C
 #define OUT_Z_H_MG			0x2D
+#define WAKE_UP_DUR			0x5C
 
 #define GYRO_OFFSET_ADDR	0x080FD000
 

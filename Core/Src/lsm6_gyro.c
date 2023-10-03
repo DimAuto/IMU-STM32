@@ -23,10 +23,10 @@ gyro_data_t gyro_sum;
 gyro_data_t gyro_mean;
 
 void tick_gyro(mems_data_t * mems_data){
-    gyro_read(mems_data);
+
     lsm6_acc_read(mems_data);
     lis3_magn_read(mems_data);
-//    osDelay(5);
+    gyro_read(mems_data);
 //    debugPrintMEMS(mems_data);
 }
 
@@ -88,8 +88,12 @@ uint8_t whoIam_lis3(void){
 
 HAL_StatusTypeDef gyro_init(void){
     uint8_t ctrl2_val = 0x50;   //gyro 208Hz-250dps
-    uint8_t ctrl3_val = 0x44;   // block data update - reg addr auto incr
+    uint8_t ctrl3_val = 0x04;   // block data update - reg addr auto incr
+    uint8_t wakeUp = 0x10;
+    uint8_t ctrl7_val = 0xD0;
+    HAL_I2C_Mem_Write(&hi2c2, LSM6, WAKE_UP_DUR, I2C_MEMADD_SIZE_8BIT, &wakeUp, 1, 20);
     HAL_I2C_Mem_Write(&hi2c2, LSM6, CTRL2_G, I2C_MEMADD_SIZE_8BIT, &ctrl2_val, 1, 20);
+    HAL_I2C_Mem_Write(&hi2c2 , LSM6, CTRL7_G, I2C_MEMADD_SIZE_8BIT, &ctrl7_val, 1, 20);
     return HAL_I2C_Mem_Write(&hi2c2, LSM6, CTRL3_C, I2C_MEMADD_SIZE_8BIT, &ctrl3_val, 1, 20);
 }
 
@@ -125,19 +129,23 @@ HAL_StatusTypeDef gyro_read(mems_data_t *mems_data){
     if (res != HAL_OK){
 		return res;
 	}
-    HAL_I2C_Mem_Read(&hi2c2, LSM6, TIMESTAMP0, I2C_MEMADD_SIZE_8BIT, ts_data, 4, 50);
+    HAL_I2C_Mem_Read(&hi2c2, LSM6, TIMESTAMP0, I2C_MEMADD_SIZE_8BIT, ts_data, 3, 50);
     if (res != HAL_OK){
 		return res;
 	}
     gyro_x = ((int16_t)((data[1] << 8) | data[0]));
     gyro_y = ((int16_t)((data[3] << 8) | data[2]));
     gyro_z = ((int16_t)((data[5] << 8) | data[4]));
-    mems_data->gyro.gyro_x = (gyro_x / -131.1f);// * -1.0f;
-    mems_data->gyro.gyro_y = (gyro_y / -131.1f);// * -1.0f;
-    mems_data->gyro.gyro_z = (gyro_z / 131.1f);// * -1.0f;
-    mems_data->timestamp = ((int)((ts_data[3]<<24)|(ts_data[2]<<16)|(ts_data[1]<<8)|(ts_data[0])));
+    mems_data->gyro.gyro_x = - (float)(gyro_x / 131.1f);// * -1.0f;
+    mems_data->gyro.gyro_y = - (float)(gyro_y / 131.1f);// * -1.0f;
+    mems_data->gyro.gyro_z =   (float)(gyro_z / 131.1f);// * -1.0f;
+    mems_data->timestamp = (int) ((ts_data[2]<<16)|(ts_data[1]<<8)|(ts_data[0]));
     return res;
 }
+
+//HAL_StatusTypeDef gyroReadTS(mems_data_t){
+//
+//}
 
 HAL_StatusTypeDef lsm6_acc_read(mems_data_t *mems_data){
 	uint8_t data[6] = {0};
@@ -150,9 +158,9 @@ HAL_StatusTypeDef lsm6_acc_read(mems_data_t *mems_data){
     acc_x = ((int16_t)((data[1] << 8) | data[0]));
     acc_y = ((int16_t)((data[3] << 8) | data[2]));
     acc_z = ((int16_t)((data[5] << 8) | data[4]));
-    mems_data->acc.acc_x = (acc_x / -16384.0f);//  * -1.0f;
-    mems_data->acc.acc_y = (acc_y / -16384.0f);// * -1.0f;
-    mems_data->acc.acc_z = (acc_z / 16384.0f);// * -1.0f;
+    mems_data->acc.acc_x = - (float)(acc_x / 16384.0f);//  * -1.0f;
+    mems_data->acc.acc_y = - (float)(acc_y / 16384.0f);// * -1.0f;
+    mems_data->acc.acc_z =	(float)(acc_z / 16384.0f);// * -1.0f;
     return res;
 }
 
@@ -168,9 +176,9 @@ HAL_StatusTypeDef lis3_magn_read(mems_data_t *mems_data){
     magn_x = ((int16_t)((data[1] << 8) | data[0]));
     magn_y = ((int16_t)((data[3] << 8) | data[2]));
     magn_z = ((int16_t)((data[5] << 8) | data[4]));
-    mems_data->magn.magn_x = magn_x / 10.0f;
-    mems_data->magn.magn_y = magn_y / 10.0f;
-    mems_data->magn.magn_z = magn_z / 10.0f;
+    mems_data->magn.magn_x = (float)(magn_x / 10.0f);
+    mems_data->magn.magn_y = (float)(magn_y / 10.0f);
+    mems_data->magn.magn_z = (float)(magn_z / 10.0f);
     return res;
 }
 
