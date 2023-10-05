@@ -35,7 +35,7 @@ static uint32_t prv_tick = 0;
 
 static clock_t timestamp = 0;
 static clock_t previousTimestamp = 0;
-
+static uint32_t update_duration = 0;
 
 FusionAhrs ahrs;
 FusionOffset offset;
@@ -55,12 +55,14 @@ void FusionInit(void){
 			.convention = FusionConventionNwu,
 			.gain = 0.5f,
 			.accelerationRejection = 10.0f,
-			.magneticRejection = 20.0f,
-			.rejectionTimeout = 5 * SAMPLE_RATE, /* 5 seconds */
+			.magneticRejection = 10.0f,
+			.rejectionTimeout = 30 * SAMPLE_RATE, /* 5 seconds */
 	};
 	FusionAhrsSetSettings(&ahrs, &settings);
+//	if (!Flash_isWritten (GYRO_OFFSET_ADDR)){	// Check if the specific memory addr is written, in order not to cause HRDFAULT
 	Flash_Read_CalTable(GYRO_OFFSET_ADDR, &values);
 	setGyroOffset(values);
+//	}
 }
 
 /* Calculate angle based only on Accelerometer and gyroscope.*/
@@ -69,18 +71,17 @@ void FusionCalcAngle(mems_data_t *memsData, FusionEuler *output_angles){
 	const FusionVector accelerometer = {memsData->acc.acc_x, memsData->acc.acc_y, memsData->acc.acc_z};
 	gyroscope = FusionVectorSubtract(gyroscope, gyroscopeOffset);
 #ifndef GYRO_TS
-	float delta = (float)(osKernelGetTickCount() - prv_tick) / 1000.0f;
-	prv_tick = osKernelGetTickCount();
+	float delta = (float)(memsData->timestamp - prv_tick) / 1000.0f;
+	prv_tick = memsData->timestamp;
 #else
 	float delta = (float) ( memsData->timestamp - previousTimestamp) * (float) GYRO_TIMESTAMP_LSB_USEC / (float) 1000000;
 	previousTimestamp = memsData->timestamp;
 #endif
-	delta += 0.002; //Add a const offset.
-	if ((delta >= 0.010) && (delta <= 0.016)){
-	FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, delta);
+//	delta += 0.006; //Add a const offset.
+	if ((delta >= MEMS_SR_SEC - 7) && (delta <= MEMS_SR_SEC + 7)){
+		FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, delta);
 	}
-
-
+//
 //	uint8_t text[20] = {0};
 //	sprintf(text, "%f\r\n,", delta);
 //	uart_write_debug(text, 20);
@@ -105,19 +106,24 @@ void FusionCalcHeading(mems_data_t *memsData, FusionEuler *output_angles){
 	FusionVector magnetometer = {memsData->magn.magn_x, memsData->magn.magn_y, memsData->magn.magn_z}; // replace this with actual magnetometer data in arbitrary units
 
 	// Apply calibration
-	gyroscope = FusionCalibrationInertial(gyroscope, gyroscopeMisalignment, gyroscopeSensitivity, gyroscopeOffset);
-	accelerometer = FusionCalibrationInertial(accelerometer, accelerometerMisalignment, accelerometerSensitivity, accelerometerOffset);
+	gyroscope = FusionVectorSubtract(gyroscope, gyroscopeOffset);
+//	accelerometer = FusionCalibrationInertial(accelerometer, accelerometerMisalignment, accelerometerSensitivity, accelerometerOffset);
 	magnetometer = FusionCalibrationMagnetic(magnetometer, softIronMatrix, hardIronOffset);
 
 	// Update gyroscope offset correction algorithm
 	gyroscope = FusionOffsetUpdate(&offset, gyroscope);
 
-	// Calculate delta time (in seconds) to account for gyroscope sample clock error
-
-	float deltaTime = (float) ( memsData->timestamp - previousTimestamp) * (float) GYRO_TIMESTAMP_LSB_USEC / (float) 1000000;
+#ifndef GYRO_TS
+	float delta = (float)(memsData->timestamp - prv_tick) / 1000.0f;
+	prv_tick = memsData->timestamp;
+#else
+	float delta = (float) ( memsData->timestamp - previousTimestamp) * (float) GYRO_TIMESTAMP_LSB_USEC / (float) 1000000;
+	previousTimestamp = memsData->timestamp;
+#endif
 	// Update gyroscope AHRS algorithm
-	FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, deltaTime);
-	previousTimestamp = timestamp;
+	if ((delta >= MEMS_SR_SEC - 7) && (delta <= MEMS_SR_SEC + 7)){
+		FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, delta);
+	}
 
 	// Print algorithm outputs
 	*output_angles = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));

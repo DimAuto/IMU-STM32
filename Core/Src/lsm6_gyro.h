@@ -59,7 +59,8 @@
 #define OUT_Z_H_MG			0x2D
 #define WAKE_UP_DUR			0x5C
 
-#define GYRO_OFFSET_ADDR	0x080FD000
+#define GYRO_OFFSET_ADDR	0x080FB000
+#define DUMMY_WRITE_ADDR	0x080FB040
 
 
 
@@ -86,7 +87,7 @@ typedef struct{
 	gyro_data_t gyro;
 	acc_data_t acc;
 	magn_data_t magn;
-    int	timestamp;
+    uint32_t	timestamp;
 }mems_data_t;
 
 uint8_t whoIam_lsm6(void);

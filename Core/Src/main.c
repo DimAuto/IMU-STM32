@@ -151,11 +151,13 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
 
-  FusionInit();
+
 
   MX_USART1_UART_Init();
 
   MX_UART4_Init();
+
+  FusionInit();
 
 
   if (lsm6_bus_init() != 0){
@@ -281,7 +283,7 @@ void readMemsTask(void *argument)
 	{
 //		osMutexAcquire(i2cMutex, osWaitForever);
 		tick_gyro(&mems_data);
-		FusionCalcAngle(&mems_data, &euler);
+		FusionCalcHeading(&mems_data, &euler);
 //		osMutexRelease(i2cMutex);
 		osMessageQueuePut(outputQueueHandle, &euler, 0U, 0U);
 		osDelay(MEMS_SR);
@@ -354,7 +356,7 @@ void gyroCalibrationTask(void *argument){
 			osThreadResume(printOutTaskHandle);
 			osThreadSuspend(gyroCalibrationTaskHandle);
 		}
-		osDelay(10);
+		osDelay(5);
 	}
 }
 
