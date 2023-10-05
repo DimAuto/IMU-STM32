@@ -52,12 +52,13 @@ void FusionInit(void){
 	FusionOffsetInitialise(&offset, SAMPLE_RATE);
 	FusionAhrsInitialise(&ahrs);
 	const FusionAhrsSettings settings = {
-			.convention = FusionConventionNwu,
-			.gain = 0.5f,
-			.accelerationRejection = 10.0f,
-			.magneticRejection = 10.0f,
-			.rejectionTimeout = 30 * SAMPLE_RATE, /* 5 seconds */
-	};
+	            .convention = FusionConventionNwu,
+	            .gain = 0.5f,
+	            .gyroscopeRange = 500.0f,
+	            .accelerationRejection = 10.0f,
+	            .magneticRejection = 10.0f,
+	            .recoveryTriggerPeriod = 30 * SAMPLE_RATE,
+	    };
 	FusionAhrsSetSettings(&ahrs, &settings);
 //	if (!Flash_isWritten (GYRO_OFFSET_ADDR)){	// Check if the specific memory addr is written, in order not to cause HRDFAULT
 	Flash_Read_CalTable(GYRO_OFFSET_ADDR, &values);

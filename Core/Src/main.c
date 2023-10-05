@@ -283,7 +283,7 @@ void readMemsTask(void *argument)
 	{
 //		osMutexAcquire(i2cMutex, osWaitForever);
 		tick_gyro(&mems_data);
-		FusionCalcHeading(&mems_data, &euler);
+		FusionCalcAngle(&mems_data, &euler);
 //		osMutexRelease(i2cMutex);
 		osMessageQueuePut(outputQueueHandle, &euler, 0U, 0U);
 		osDelay(MEMS_SR);
