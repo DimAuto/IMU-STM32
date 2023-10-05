@@ -203,7 +203,7 @@ void Error_Handler(void);
 #define ISM43362_DRDY_EXTI1_GPIO_Port GPIOE
 
 /* USER DEFINES */
-#define GYRO_TS
+//#define GYRO_TS
 #define MEMS_SR 10
 #define MEMS_SR_SEC (MEMS_SR / 1000)
 

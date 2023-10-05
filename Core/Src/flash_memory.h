@@ -22,6 +22,10 @@ uint32_t FlashWriteData (uint32_t StartPageAddress, uint64_t *Data, uint16_t num
 
 uint32_t Flash_Write_CalTable (uint32_t StartSectorAddress, gyro_data_t *gyro_data);
 
-void Flash_Read_CalTable (uint32_t StartSectorAddress, gyro_data_t *data);
+uint32_t Flash_isWritten (uint32_t StartSectorAddress);
+
+uint32_t FlashErase(uint32_t StartPageAddress, uint32_t numberofpages);
+
+uint32_t Flash_Read_CalTable (uint32_t StartSectorAddress, gyro_data_t *data);
 
 #endif /* SRC_FLASH_MEMORY_H_ */

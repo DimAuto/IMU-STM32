@@ -37,6 +37,9 @@ void float2Bytes(uint8_t * ftoa_bytes_temp,float float_variable)
     for (uint8_t i = 0; i < 4; i++) {
       ftoa_bytes_temp[i] = thing.bytes[i];
     }
+    for (uint8_t i = 4; i < 8; i++) {
+    	ftoa_bytes_temp[i] = 0xFF;
+    }
 
 }
 
@@ -71,6 +74,37 @@ void FlashReadData (uint32_t StartPageAddress, uint64_t *RxBuf, uint16_t numbero
 	}
 }
 
+uint32_t FlashErase(uint32_t StartPageAddress, uint32_t numberofpages){
+	static FLASH_EraseInitTypeDef EraseInitStruct;
+	uint32_t PAGEError;
+  /* Unlock the Flash to enable the flash control register access *************/
+   HAL_FLASH_Unlock();
+   __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS);
+   HAL_FLASH_Lock();
+
+   /* Erase the user Flash area*/
+
+  uint32_t StartPage = GetPage(StartPageAddress);
+
+
+   /* Fill EraseInit structure*/
+   EraseInitStruct.Banks = FLASH_BANK_1;
+   EraseInitStruct.TypeErase   = FLASH_TYPEERASE_PAGES;
+   EraseInitStruct.Page = ((StartPage - FLASH_BASE) / FLASH_PAGE_SIZE);
+   EraseInitStruct.NbPages = numberofpages;
+
+   HAL_FLASH_Unlock();
+   if (HAL_FLASHEx_Erase(&EraseInitStruct, &PAGEError) != HAL_OK)
+   {
+	 /*Error occurred while page erase.*/
+	   uart_write_debug("Failed to erase flash\r\n",UART_NYX);
+	  return HAL_FLASH_GetError ();
+
+   }
+   HAL_FLASH_Lock();
+   return 0;
+}
+
 
 uint32_t FlashWriteData (uint32_t StartPageAddress, uint64_t *Data, uint16_t numberofwords)
 {
@@ -88,16 +122,17 @@ uint32_t FlashWriteData (uint32_t StartPageAddress, uint64_t *Data, uint16_t num
 	  uint32_t EndPage = GetPage(EndPageAdress);
 
 	   /* Fill EraseInit structure*/
-	   EraseInitStruct.Banks = FLASH_BANK_2;
+	   EraseInitStruct.Banks = FLASH_BANK_1;
 	   EraseInitStruct.TypeErase   = FLASH_TYPEERASE_PAGES;
-	   EraseInitStruct.Page = ((StartPage - FLASH_BASE) / FLASH_PAGE_SIZE) + 1;
+	   EraseInitStruct.Page = ((StartPage - FLASH_BASE) / FLASH_PAGE_SIZE);
 	   EraseInitStruct.NbPages = ((EndPage - StartPage)/FLASH_PAGE_SIZE) + 1;
 
 	   if (HAL_FLASHEx_Erase(&EraseInitStruct, &PAGEError) != HAL_OK)
 	   {
 	     /*Error occurred while page erase.*/
 		   uart_write_debug("Failed to erase flash\r\n",UART_NYX);
-		  return HAL_FLASH_GetError ();
+		   HAL_FLASH_Lock();
+		   return HAL_FLASH_GetError ();
 
 	   }
 
@@ -114,6 +149,7 @@ uint32_t FlashWriteData (uint32_t StartPageAddress, uint64_t *Data, uint16_t num
 	     {
 	       /* Error occurred while writing data in Flash memory*/
 	    	 uart_write_debug("Failed to write flash\r\n",UART_NYX);
+	    	 HAL_FLASH_Lock();
 	    	 return HAL_FLASH_GetError ();
 	     }
 	   }
@@ -126,21 +162,33 @@ uint32_t FlashWriteData (uint32_t StartPageAddress, uint64_t *Data, uint16_t num
 
 void Flash_Write_NUM (uint32_t StartSectorAddress, float Num)
 {
-	uint8_t bytes_temp[4] = {0};
+	uint8_t bytes_temp[8] = {0};
 	float2Bytes(bytes_temp, Num);
 
-	FlashWriteData (StartSectorAddress, (uint32_t *)bytes_temp, 1);
+	FlashWriteData (StartSectorAddress, (uint64_t *)bytes_temp, 1);
 }
 
 
 float Flash_Read_NUM (uint32_t StartSectorAddress)
 {
-	uint8_t buffer[4];
+	uint8_t buffer[8];
 	float value;
 
-	FlashReadData(StartSectorAddress, (uint32_t *)buffer, 1);
+	FlashReadData(StartSectorAddress, (uint64_t *)buffer, 1);
 	value = Bytes2float(buffer);
 	return value;
+}
+
+uint32_t Flash_isWritten (uint32_t StartSectorAddress)
+{
+	uint8_t buffer[8] = {0};
+
+	FlashReadData(StartSectorAddress, (uint64_t *)buffer, 1);
+	if (buffer[0] != 0xFF){
+		return 0;
+	}
+	uart_write_debug("Flash addr is empty\r\n",UART_NYX);
+	return 1;
 }
 
 
@@ -151,7 +199,7 @@ uint32_t Flash_Write_CalTable (uint32_t StartSectorAddress, gyro_data_t *data)
 	temp[0] = data->gyro_x;
 	temp[1] = data->gyro_y;
 	temp[2] = data->gyro_z;
-	uint8_t bytes_temp[12] = {0};
+	uint8_t bytes_temp[16] = {0};
 	union {
 	  float a;
 	  uint8_t bytes[4];
@@ -166,16 +214,23 @@ uint32_t Flash_Write_CalTable (uint32_t StartSectorAddress, gyro_data_t *data)
 		}
 		v+=4;
 	}
-	res = FlashWriteData (StartSectorAddress, (uint64_t *)bytes_temp, 3);
+	for (uint8_t i = 12; i < 16; i++){
+		bytes_temp[i] = 0xFF;
+	}
+	res = FlashWriteData (StartSectorAddress, (uint64_t *)bytes_temp, 2);
 	return res;
 }
 
-void Flash_Read_CalTable (uint32_t StartSectorAddress, gyro_data_t *data)
+uint32_t Flash_Read_CalTable (uint32_t StartSectorAddress, gyro_data_t *data)
 {
 	uint8_t buffer[20] = {0};
 	float temp[3] = {0.0f};
 
 	FlashReadData(StartSectorAddress, (uint64_t *)buffer, 2);
+
+	if ((buffer[0] == 255) && (buffer[1] == 255)){
+		return 1;
+	}
 	union {
 	  float a;
 	  uint8_t bytes[4];
@@ -192,6 +247,11 @@ void Flash_Read_CalTable (uint32_t StartSectorAddress, gyro_data_t *data)
 	data->gyro_x = temp[0];
 	data->gyro_y = temp[1];
 	data->gyro_z = temp[2];
+
+	if (temp[0] == 0.0f){
+		uart_write_debug("Failed to read flash\r\n",UART_NYX);
+	}
+	return 0;
 }
 
 void Convert_To_Str (uint32_t *Data, char *Buf)
