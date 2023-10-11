@@ -1,5 +1,0 @@
-uart.c:22:6:MX_USART1_UART_Init	5
-uart.c:54:6:MX_UART4_Init	5
-uart.c:88:6:Error_Handler	1
-uart.c:96:19:uart_write_debug	1
-uart.c:102:19:uart_write_uart	5

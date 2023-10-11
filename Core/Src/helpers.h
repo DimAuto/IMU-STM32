@@ -10,6 +10,8 @@
 
 #include <stdint.h>
 
+void arrayRemoveFirstCharacter(uint8_t *array, uint8_t max_size);
+
 const char *float_to_char(float num);
 
 const char *int_to_char(uint16_t num);
@@ -27,3 +29,6 @@ long coorsAtol(char *coors, char sign);
 long altAtol(char *str);
 
 #endif /* SRC_CORE_HELPERS_H_ */
+
+
+

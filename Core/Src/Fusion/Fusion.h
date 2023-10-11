@@ -8,7 +8,8 @@
 #ifndef FUSION_H
 #define FUSION_H
 
-#include "../lsm6_gyro.h"
+//------------------------------------------------------------------------------
+// Includes
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,13 +22,6 @@ extern "C" {
 #include "FusionConvention.h"
 #include "FusionMath.h"
 #include "FusionOffset.h"
-
-
-void FusionInit(void);
-
-void FusionCalcAngle(mems_data_t *memsData, FusionEuler *output_angles);
-
-void FusionCalcHeading(mems_data_t *memsData, FusionEuler *output_angles);
 
 #ifdef __cplusplus
 }

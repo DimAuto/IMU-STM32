@@ -18,11 +18,14 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
 #include "lsm6_gyro.h"
 #include "gps_neoM9N.h"
 #include "uart.h"
+#include "ring_buffer.h"
 #include "Fusion/Fusion.h"
+#include "message_handler.h"
+#include "ellipsoid_fit.h"
+
 
 
 /* Definitions for defaultTask */
@@ -31,6 +34,11 @@ osThreadId_t calcHeadingTaskHandle;
 osThreadId_t readMemsTaskHandle;
 osThreadId_t printOutTaskHandle;
 osThreadId_t getCoorsTaskHandle;
+osThreadId_t readMessageTaskHandle;
+osThreadId_t sendMessageTaskHandle;
+osThreadId_t gyroCalibrationTaskHandle;
+osThreadId_t magnCalibrationTaskHandle;
+
 
 osSemaphoreId_t binSemHandle;
 const osSemaphoreAttr_t binSem_attributes = {
@@ -63,14 +71,43 @@ const osThreadAttr_t readMemsTask_attributes = {
 
 const osThreadAttr_t getCoorsTask_attributes = {
   .name = "getCoors",
-  .stack_size = 128 * 16,
-  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 8,
+  .priority = (osPriority_t) osPriorityLow,
+};
+
+const osThreadAttr_t readMessageTaskHandle_attributes = {
+  .name = "readMessage",
+  .stack_size = 128 * 8,
+  .priority = (osPriority_t) osPriorityHigh,
+};
+
+const osThreadAttr_t sendMessageTaskHandle_attributes = {
+  .name = "sendMessage",
+  .stack_size = 128 * 8,
+  .priority = (osPriority_t) osPriorityHigh,
+};
+
+const osThreadAttr_t gyroCalibrationTaskHandle_attributes = {
+  .name = "gyro_calibration",
+  .stack_size = 128 * 8,
+  .priority = (osPriority_t) osPriorityHigh,
+};
+
+const osThreadAttr_t magnCalibrationTaskHandle_attributes = {
+  .name = "magn_calibration",
+  .stack_size = 128 * 10,
+  .priority = (osPriority_t) osPriorityHigh,
 };
 
 /* Definitions for myMutex01 */
 osMutexId_t debugUartMutex;
 const osMutexAttr_t uartMutex_attributes = {
   .name = "debugUartMutex"
+};
+
+osMutexId_t i2cMutex;
+const osMutexAttr_t i2cMutex_attributes = {
+  .name = "i2cMutex"
 };
 
 /* Definitions for memsQueue */
@@ -84,6 +121,14 @@ const osMessageQueueAttr_t outputQueue_attributes = {
   .name = "outputQueue"
 };
 
+osMessageQueueId_t messageQueueHandle;
+const osMessageQueueAttr_t messageQueue_attributes = {
+  .name = "messageQueue"
+};
+
+
+// Ack receive event flag
+osEventFlagsId_t ack_rcvd;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -94,15 +139,10 @@ void calcHeadingTask(void *argument);
 void readMemsTask(void *argument);
 void printOutTask(void *argument);
 void getCoorsTask(void *argument);
-
-/* USER CODE BEGIN PFP */
-
-/* USER CODE END PFP */
-
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
+void readMessageTask(void *argument);
+void sendMessageTask(void *argument);
+void gyroCalibrationTask(void *argument);
+void magnCalibrationTask(void *argument);
 
 /**
   * @brief  The application entry point.
@@ -110,32 +150,22 @@ void getCoorsTask(void *argument);
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
-
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+
+
 
   MX_USART1_UART_Init();
 
   MX_UART4_Init();
+
+  FusionInit();
 
 
   if (lsm6_bus_init() != 0){
@@ -172,25 +202,37 @@ int main(void)
 
   /* Init scheduler */
   osKernelInitialize();
-
   /* USER CODE BEGIN RTOS_MUTEX */
   debugUartMutex = osMutexNew(&uartMutex_attributes);
+  i2cMutex = osMutexNew(&i2cMutex_attributes);
   /* USER CODE END RTOS_MUTEX */
-
-  memsQueueHandle = osMessageQueueNew (4, sizeof(mems_data_t), &memsQueue_attributes);
-  /* USER CODE END RTOS_QUEUES */
+  memsQueueHandle = osMessageQueueNew (8, sizeof(mems_data_t), &memsQueue_attributes);
   outputQueueHandle = osMessageQueueNew (4, sizeof(FusionEuler), &outputQueue_attributes);
-  /* Create the thread(s) */
-  /* creation of defaultTask */
+  messageQueueHandle = osMessageQueueNew (8, RB_SIZE, &messageQueue_attributes);
+  /* EVENT FLAG FOR ACK RECEIVE */
+  ack_rcvd = osEventFlagsNew(NULL);
+  //							//
+
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   readMemsTaskHandle = osThreadNew(readMemsTask, NULL, &readMemsTask_attributes);
 
-  calcHeadingTaskHandle = osThreadNew(calcHeadingTask, NULL, &calcHeadingTask_attributes);
+//  calcHeadingTaskHandle = osThreadNew(calcHeadingTask, NULL, &calcHeadingTask_attributes);
 
   printOutTaskHandle = osThreadNew(printOutTask, NULL, &printOutTask_attributes);
 
-  getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
+//  getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
+
+//  sendMessageTaskHandle = osThreadNew(sendMessageTask, NULL, &sendMessageTaskHandle_attributes);
+
+  readMessageTaskHandle = osThreadNew(readMessageTask, NULL, &readMessageTaskHandle_attributes);
+
+  gyroCalibrationTaskHandle = osThreadNew(gyroCalibrationTask, NULL, &gyroCalibrationTaskHandle_attributes);
+
+//  magnCalibrationTaskHandle = osThreadNew(magnCalibrationTask, NULL, &magnCalibrationTaskHandle_attributes);
+
+  /*Suspend the gyro-calibration task*/
+  osThreadSuspend(gyroCalibrationTaskHandle);
 
   /* Start scheduler */
   osKernelStart();
@@ -218,6 +260,7 @@ void StartDefaultTask(void *argument)
   for(;;)
   {
 	HAL_GPIO_TogglePin(GPIOB,LED2_Pin);
+	uart_receive_it(UART_NYX);
     osDelay(500);
   }
   /* USER CODE END 5 */
@@ -233,23 +276,27 @@ void calcHeadingTask(void *argument)
 
 	for(;;)
 	{
-		status = osMessageQueueGet(memsQueueHandle, &mems_data, NULL, 0U);   // wait for message
+		status = osMessageQueueGet(memsQueueHandle, &mems_data, NULL, 5U);   // wait for message
 	    if (status == osOK) {
 	    	FusionCalcHeading(&mems_data, &euler);
-	    	osMessageQueuePut(outputQueueHandle, &euler, 0U, 0U);
+	    	osMessageQueuePut(outputQueueHandle, &euler, 0U, 5U);
 	    }
-		osDelay(10);
+		osDelay(30);
 	}
 }
 
 void readMemsTask(void *argument)
 {
 	mems_data_t mems_data;
+	FusionEuler euler;
 	for(;;)
 	{
+//		osMutexAcquire(i2cMutex, osWaitForever);
 		tick_gyro(&mems_data);
-		osMessageQueuePut(memsQueueHandle, &mems_data, 0U, 0U);
-		osDelay(50);
+		FusionCalcAngle(&mems_data, &euler);
+//		osMutexRelease(i2cMutex);
+		osMessageQueuePut(outputQueueHandle, &euler, 0U, 0U);
+		osDelay(MEMS_SR);
 	}
 }
 
@@ -263,7 +310,7 @@ void printOutTask(void *argument)
 
 	for(;;)
 	{
-		status = osMessageQueueGet(outputQueueHandle, &euler, NULL, 0U);   // wait for message
+		status = osMessageQueueGet(outputQueueHandle, &euler, NULL, 5U);   // wait for message
 		if (status == osOK) {
 			sprintf(text, "\n%f\r", euler.angle.yaw);
 			osMutexAcquire(debugUartMutex, osWaitForever);
@@ -271,7 +318,7 @@ void printOutTask(void *argument)
 			osMutexRelease(debugUartMutex);
 			memset(text,0,sizeof(text));
 		}
-		osDelay(100);
+		osDelay(70);
 	}
 }
 
@@ -280,14 +327,73 @@ void getCoorsTask(void *argument){
 
 	for(;;)
 	{
-		osMutexAcquire(debugUartMutex, osWaitForever);
+//		osMutexAcquire(i2cMutex, osWaitForever);
+//		osMutexAcquire(debugUartMutex, osWaitForever);
 		ublox_tick();
-		osMutexRelease(debugUartMutex);
+//		osMutexRelease(i2cMutex);
+//		osMutexRelease(debugUartMutex);
 		osDelay(1700);
 	}
 }
 
+void readMessageTask(void *argument){
+	osStatus_t status;
+	uint32_t ack_flag;
+	uint8_t message_buffer[RB_SIZE] = {0};
+	for(;;){
+		status = osMessageQueueGet(messageQueueHandle, message_buffer, NULL, osWaitForever);   // wait for message
+		if (status == osOK) {
+			tick_Handler(message_buffer);
+			ack_flag = osEventFlagsWait(ack_rcvd, ACK_FLAG, osFlagsWaitAny, 150);
+			if (ack_flag != 1){
+				tick_Handler(message_buffer);
+			}
+		}
+		osDelay(200);
+	}
+}
 
+void gyroCalibrationTask(void *argument){
+	mems_data_t mems_data;
+	osThreadSuspend(readMemsTaskHandle);
+	osThreadSuspend(printOutTaskHandle);
+	osDelay(100);
+	uart_write_debug("Gyro Calibration: Hold the device still\r\n", 50);
+	for(;;){
+		if (gyro_offset_calculation(&mems_data) == 0){
+			uart_write_debug("Gyro Calibration: Finished!\r\n", 50);
+			osThreadResume(readMemsTaskHandle);
+			osThreadResume(printOutTaskHandle);
+			osThreadSuspend(gyroCalibrationTaskHandle);
+		}
+		osDelay(10);
+	}
+}
+
+void magnCalibrationTask(void *argument){
+	float mag_samples[3*MAGN_CALIB_SAMPLES];
+	FusionVector hardiron;
+	FusionMatrix softiron;
+	mems_data_t mems_data;
+	osThreadSuspend(readMemsTaskHandle);
+	osThreadSuspend(printOutTaskHandle);
+	uart_write_debug("Magnetometer Calibration: Rotate the device multiple times on each axis\r\n", 100);
+	for(;;){
+		if (magneto_sample(&mems_data, mag_samples) == 0){
+			magneto_calculate(mag_samples, MAGN_CALIB_SAMPLES, &hardiron, &softiron);
+			setMagnCoeff(hardiron, softiron);
+			uart_write_debug("Magnetometer Calibration: Finished!\r\n", 50);
+			osThreadResume(readMemsTaskHandle);
+			osThreadResume(printOutTaskHandle);
+			osThreadTerminate(magnCalibrationTaskHandle);
+		}
+		osDelay(50);
+	}
+}
+
+void magnCalStart(){
+	magnCalibrationTaskHandle = osThreadNew(magnCalibrationTask, NULL, &magnCalibrationTaskHandle_attributes);
+}
 
 //////////// SYSTEM CONFIG ///////////////////
 

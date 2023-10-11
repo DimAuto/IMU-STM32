@@ -57,20 +57,40 @@
 #define OUT_Y_H_MG			0x2B
 #define OUT_Z_L_MG			0x2C
 #define OUT_Z_H_MG			0x2D
+#define WAKE_UP_DUR			0x5C
 
+#define GYRO_OFFSET_ADDR	0x080FB000
+#define DUMMY_WRITE_ADDR	0x080FB040
+
+#define GYRO_CALIB_SAMPLES	700
+#define MAGN_CALIB_SAMPLES	1000
+#define ACC_CALIB_SAMPLES	200
 
 
 typedef struct{
-    float gyro_x;
-    float gyro_y;
-    float gyro_z;
-    float acc_x;
-    float acc_y;
-    float acc_z;
+	float gyro_x;
+	float gyro_y;
+	float gyro_z;
+}gyro_data_t;
+
+
+typedef struct{
+	float acc_x;
+	float acc_y;
+	float acc_z;
+}acc_data_t;
+
+typedef struct{
     float magn_x;
     float magn_y;
     float magn_z;
-    int	timestamp;
+}magn_data_t;
+
+typedef struct{
+	gyro_data_t gyro;
+	acc_data_t acc;
+	magn_data_t magn;
+    uint32_t	timestamp;
 }mems_data_t;
 
 uint8_t whoIam_lsm6(void);
@@ -92,5 +112,9 @@ HAL_StatusTypeDef lsm6_acc_read(mems_data_t *mems_data);
 HAL_StatusTypeDef lis3_magn_read(mems_data_t *mems_data);
 
 void tick_gyro(mems_data_t *mems_data);
+
+uint8_t gyro_offset_calculation(mems_data_t *mems_data);
+
+void setGyroOffset(gyro_data_t values);
 
 #endif /* SRC_LSM6_GYRO_H_ */

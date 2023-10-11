@@ -28,26 +28,10 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l4xx_hal.h"
+#include "cmsis_os.h"
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 
-/* USER CODE END Includes */
-
-/* Exported types ------------------------------------------------------------*/
-/* USER CODE BEGIN ET */
-
-/* USER CODE END ET */
-
-/* Exported constants --------------------------------------------------------*/
-/* USER CODE BEGIN EC */
-
-/* USER CODE END EC */
-
-/* Exported macro ------------------------------------------------------------*/
-/* USER CODE BEGIN EM */
-
-/* USER CODE END EM */
+#define FW_VERSION	0x6e
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
@@ -217,6 +201,15 @@ void Error_Handler(void);
 #define ISM43362_SPI3_CSN_GPIO_Port GPIOE
 #define ISM43362_DRDY_EXTI1_Pin GPIO_PIN_1
 #define ISM43362_DRDY_EXTI1_GPIO_Port GPIOE
+
+
+/* USER DEFINES */
+//#define GYRO_TS
+#define MEMS_SR 10
+#define MEMS_SR_SEC (MEMS_SR / 1000)
+
+
+void magnCalStart();
 
 
 /* USER CODE END Private defines */

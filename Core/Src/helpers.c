@@ -12,6 +12,15 @@
 #include "helpers.h"
 
 
+//void arrayRemoveFirstCharacter(uint8_t *array, uint8_t max_size){
+//	uint8_t i;
+//	for (i=0; i<max_size, i++){
+//		if (i>0){
+//
+//		}
+//	}
+//}
+
 const char *float_to_char(float num){
     char *tmp;
     char *sign = (num < 0) ? "-" : "";
