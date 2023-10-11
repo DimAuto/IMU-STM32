@@ -13,14 +13,17 @@
 #include "uart.h"
 #include "flash_memory.h"
 
+
 // I2C object
 I2C_HandleTypeDef hi2c2;
 
 static void debugPrintMEMS(mems_data_t *mems_data);
 
 uint16_t gyro_offset_counter = 0;
+uint16_t magn_calib_counter = 0;
 gyro_data_t gyro_sum;
 gyro_data_t gyro_mean;
+
 
 void tick_gyro(mems_data_t * mems_data){
 
@@ -193,13 +196,25 @@ uint8_t gyro_offset_calculation(mems_data_t *mems_data){
 	gyro_sum.gyro_y += mems_data->gyro.gyro_y;
 	gyro_sum.gyro_z += mems_data->gyro.gyro_z;
 	gyro_offset_counter++;
-	if (gyro_offset_counter >= 1400){
+	if (gyro_offset_counter >= GYRO_CALIB_SAMPLES){
 		gyro_mean.gyro_x = gyro_sum.gyro_x / gyro_offset_counter;
 		gyro_mean.gyro_y = gyro_sum.gyro_y / gyro_offset_counter;
 		gyro_mean.gyro_z = gyro_sum.gyro_z / gyro_offset_counter;
 		setGyroOffset(gyro_mean);
 		gyro_offset_counter = 0;
 		Flash_Write_CalTable(GYRO_OFFSET_ADDR, &gyro_mean);
+		return 0;
+	}
+	return 1;
+}
+
+uint8_t magneto_sample(mems_data_t *mems_data, float *magn_samples){
+	lis3_magn_read(mems_data);
+	magn_samples[magn_calib_counter * 3 + 0] = mems_data->magn.magn_x;
+	magn_samples[magn_calib_counter * 3 + 1] = mems_data->magn.magn_y;
+	magn_samples[magn_calib_counter * 3 + 2] = mems_data->magn.magn_z;
+	if (magn_calib_counter >= MAGN_CALIB_SAMPLES){
+		magn_calib_counter = 0;
 		return 0;
 	}
 	return 1;

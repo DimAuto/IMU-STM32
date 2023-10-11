@@ -24,6 +24,7 @@
 #include "ring_buffer.h"
 #include "Fusion/Fusion.h"
 #include "message_handler.h"
+#include "ellipsoid_fit.h"
 
 
 
@@ -36,6 +37,7 @@ osThreadId_t getCoorsTaskHandle;
 osThreadId_t readMessageTaskHandle;
 osThreadId_t sendMessageTaskHandle;
 osThreadId_t gyroCalibrationTaskHandle;
+osThreadId_t magnCalibrationTaskHandle;
 
 
 osSemaphoreId_t binSemHandle;
@@ -91,6 +93,11 @@ const osThreadAttr_t gyroCalibrationTaskHandle_attributes = {
   .priority = (osPriority_t) osPriorityHigh,
 };
 
+const osThreadAttr_t magnCalibrationTaskHandle_attributes = {
+  .name = "magn_calibration",
+  .stack_size = 128 * 10,
+  .priority = (osPriority_t) osPriorityHigh,
+};
 
 /* Definitions for myMutex01 */
 osMutexId_t debugUartMutex;
@@ -135,6 +142,7 @@ void getCoorsTask(void *argument);
 void readMessageTask(void *argument);
 void sendMessageTask(void *argument);
 void gyroCalibrationTask(void *argument);
+void magnCalibrationTask(void *argument);
 
 /**
   * @brief  The application entry point.
@@ -220,6 +228,8 @@ int main(void)
   readMessageTaskHandle = osThreadNew(readMessageTask, NULL, &readMessageTaskHandle_attributes);
 
   gyroCalibrationTaskHandle = osThreadNew(gyroCalibrationTask, NULL, &gyroCalibrationTaskHandle_attributes);
+
+//  magnCalibrationTaskHandle = osThreadNew(magnCalibrationTask, NULL, &magnCalibrationTaskHandle_attributes);
 
   /*Suspend the gyro-calibration task*/
   osThreadSuspend(gyroCalibrationTaskHandle);
@@ -356,10 +366,34 @@ void gyroCalibrationTask(void *argument){
 			osThreadResume(printOutTaskHandle);
 			osThreadSuspend(gyroCalibrationTaskHandle);
 		}
-		osDelay(5);
+		osDelay(10);
 	}
 }
 
+void magnCalibrationTask(void *argument){
+	float mag_samples[3*MAGN_CALIB_SAMPLES];
+	FusionVector hardiron;
+	FusionMatrix softiron;
+	mems_data_t mems_data;
+	osThreadSuspend(readMemsTaskHandle);
+	osThreadSuspend(printOutTaskHandle);
+	uart_write_debug("Magnetometer Calibration: Rotate the device multiple times on each axis\r\n", 100);
+	for(;;){
+		if (magneto_sample(&mems_data, mag_samples) == 0){
+			magneto_calculate(mag_samples, MAGN_CALIB_SAMPLES, &hardiron, &softiron);
+			setMagnCoeff(hardiron, softiron);
+			uart_write_debug("Magnetometer Calibration: Finished!\r\n", 50);
+			osThreadResume(readMemsTaskHandle);
+			osThreadResume(printOutTaskHandle);
+			osThreadTerminate(magnCalibrationTaskHandle);
+		}
+		osDelay(50);
+	}
+}
+
+void magnCalStart(){
+	magnCalibrationTaskHandle = osThreadNew(magnCalibrationTask, NULL, &magnCalibrationTaskHandle_attributes);
+}
 
 //////////// SYSTEM CONFIG ///////////////////
 

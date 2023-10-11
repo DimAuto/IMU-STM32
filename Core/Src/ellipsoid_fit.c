@@ -1,9 +1,3 @@
-/*
- * ellipsoid_fit.c
- *
- *  Created on: Jul 21, 2023
- *      Author: dkalaitzakis
- */
 
 // magneto 1.4 magnetometer/accelerometer calibration code
 // from http://sailboatinstruments.blogspot.com/2011/08/improved-magnetometer-calibration.html

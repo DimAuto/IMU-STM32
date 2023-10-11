@@ -28,8 +28,8 @@ const FusionVector accelerometerOffset = {0.0f, 0.0f, 0.0f};
 //const FusionMatrix softIronMatrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 //const FusionVector hardIronOffset = {0.0f, 0.0f, 0.0f};
 
-const FusionMatrix softIronMatrix = {0.1835f, 0.0053f, -0.0027f, 0.0053f, 0.1878, -0.0007f, -0.0027f, -0.0007f, 0.1786f};
-const FusionVector hardIronOffset = {0.9485f, 0.0f, 80.0f};
+static FusionMatrix softIronMatrix = {0.1835f, 0.0053f, -0.0027f, 0.0053f, 0.1878, -0.0007f, -0.0027f, -0.0007f, 0.1786f};
+static FusionVector hardIronOffset = {0.9485f, 0.0f, 80.0f};
 
 static uint32_t prv_tick = 0;
 
@@ -45,6 +45,18 @@ void setGyroOffset(gyro_data_t values){
 	gyroscopeOffset.array[1] = values.gyro_y;
 	gyroscopeOffset.array[2] = values.gyro_z;
 }
+
+void setMagnCoeff(FusionVector hardiron, FusionMatrix softiron){
+	for (uint8_t i=0; i<=3; i++){
+		hardIronOffset.array[i] = hardiron.array[i];
+	}
+	for (uint8_t i=0; i<=3; i++){
+		for (uint8_t j=0; j<=3; j++){
+			softIronMatrix.array[i][j] = softiron.array[i][j];
+		}
+	}
+}
+
 
 /* Initialize Fusion algorithm. */
 void FusionInit(void){
@@ -71,6 +83,8 @@ void FusionCalcAngle(mems_data_t *memsData, FusionEuler *output_angles){
 	FusionVector gyroscope = {memsData->gyro.gyro_x, memsData->gyro.gyro_y, memsData->gyro.gyro_z};
 	const FusionVector accelerometer = {memsData->acc.acc_x, memsData->acc.acc_y, memsData->acc.acc_z};
 	gyroscope = FusionVectorSubtract(gyroscope, gyroscopeOffset);
+
+	gyroscope = FusionOffsetUpdate(&offset, gyroscope);
 #ifndef GYRO_TS
 	float delta = (float)(memsData->timestamp - prv_tick) / 1000.0f;
 	prv_tick = memsData->timestamp;

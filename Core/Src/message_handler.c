@@ -243,6 +243,9 @@ void handler(UART_select device){
     case 0xC0:
     	osThreadResume(gyroCalibrationTaskHandle);
     	break;
+    case 0xC1:
+    	magnCalStart();
+		break;
     default:
         break;
     }
