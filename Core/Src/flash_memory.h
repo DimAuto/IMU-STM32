@@ -7,6 +7,7 @@
 
 #include "main.h"
 #include "lsm6_gyro.h"
+#include "Fusion/Fusion.h"
 
 #ifndef SRC_FLASH_MEMORY_H_
 #define SRC_FLASH_MEMORY_H_
@@ -20,12 +21,16 @@ float Flash_Read_NUM (uint32_t StartSectorAddress);
 
 uint32_t FlashWriteData (uint32_t StartPageAddress, uint64_t *Data, uint16_t numberofwords);
 
-uint32_t Flash_Write_CalTable (uint32_t StartSectorAddress, gyro_data_t *gyro_data);
+uint32_t Flash_Write_Vector (uint32_t StartSectorAddress, FusionVector *gyro_data);
 
 uint32_t Flash_isWritten (uint32_t StartSectorAddress);
 
 uint32_t FlashErase(uint32_t StartPageAddress, uint32_t numberofpages);
 
-uint32_t Flash_Read_CalTable (uint32_t StartSectorAddress, gyro_data_t *data);
+uint32_t Flash_Read_Vector (uint32_t StartSectorAddress, FusionVector *data);
+
+uint32_t Flash_Write_Matrix (uint32_t StartSectorAddress, FusionMatrix *data);
+
+uint32_t Flash_Read_Matrix (uint32_t StartSectorAddress, FusionMatrix *data);
 
 #endif /* SRC_FLASH_MEMORY_H_ */
