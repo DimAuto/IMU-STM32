@@ -38,6 +38,7 @@ osThreadId_t readMessageTaskHandle;
 osThreadId_t sendMessageTaskHandle;
 osThreadId_t gyroCalibrationTaskHandle;
 osThreadId_t magnCalibrationTaskHandle;
+osThreadId_t accCalibrationTaskHandle;
 
 
 osSemaphoreId_t binSemHandle;
@@ -95,7 +96,13 @@ const osThreadAttr_t gyroCalibrationTaskHandle_attributes = {
 
 const osThreadAttr_t magnCalibrationTaskHandle_attributes = {
   .name = "magn_calibration",
-  .stack_size = 128 * 10,
+  .stack_size = 128 * 8,
+  .priority = (osPriority_t) osPriorityHigh,
+};
+
+const osThreadAttr_t accCalibrationTaskHandle_attributes = {
+  .name = "acc_calibration",
+  .stack_size = 128 * 8,
   .priority = (osPriority_t) osPriorityHigh,
 };
 
@@ -129,6 +136,7 @@ const osMessageQueueAttr_t messageQueue_attributes = {
 
 // Ack receive event flag
 osEventFlagsId_t ack_rcvd;
+osEventFlagsId_t wait_for_ack;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -143,6 +151,7 @@ void readMessageTask(void *argument);
 void sendMessageTask(void *argument);
 void gyroCalibrationTask(void *argument);
 void magnCalibrationTask(void *argument);
+void accCalibrationTask(void *argument);
 
 /**
   * @brief  The application entry point.
@@ -293,11 +302,12 @@ void readMemsTask(void *argument)
 	{
 //		osMutexAcquire(i2cMutex, osWaitForever);
 		tick_gyro(&mems_data);
-		FusionCalcAngle(&mems_data, &euler);
+		FusionCalcHeading(&mems_data, &euler);
 //		osMutexRelease(i2cMutex);
 		osMessageQueuePut(outputQueueHandle, &euler, 0U, 0U);
 		osDelay(MEMS_SR);
 	}
+	osDelay(MEMS_SR);
 }
 
 
@@ -338,15 +348,19 @@ void getCoorsTask(void *argument){
 
 void readMessageTask(void *argument){
 	osStatus_t status;
-	uint32_t ack_flag;
+	uint32_t ack_flag, wait_flag;
 	uint8_t message_buffer[RB_SIZE] = {0};
 	for(;;){
 		status = osMessageQueueGet(messageQueueHandle, message_buffer, NULL, osWaitForever);   // wait for message
 		if (status == osOK) {
 			tick_Handler(message_buffer);
-			ack_flag = osEventFlagsWait(ack_rcvd, ACK_FLAG, osFlagsWaitAny, 150);
-			if (ack_flag != 1){
-				tick_Handler(message_buffer);
+			wait_flag = osEventFlagsWait(wait_for_ack, 0x00000001U, osFlagsWaitAny, 20);
+			if (wait_flag == 1){
+				ack_flag = osEventFlagsWait(ack_rcvd, ACK_FLAG, osFlagsWaitAny, 150);
+				if (ack_flag != 1){
+					tick_Handler(message_buffer);
+				}
+				osEventFlagsSet(wait_for_ack, 0x00000000U);
 			}
 		}
 		osDelay(200);
@@ -371,17 +385,12 @@ void gyroCalibrationTask(void *argument){
 }
 
 void magnCalibrationTask(void *argument){
-	float mag_samples[3*MAGN_CALIB_SAMPLES];
-	FusionVector hardiron;
-	FusionMatrix softiron;
 	mems_data_t mems_data;
 	osThreadSuspend(readMemsTaskHandle);
 	osThreadSuspend(printOutTaskHandle);
 	uart_write_debug("Magnetometer Calibration: Rotate the device multiple times on each axis\r\n", 100);
 	for(;;){
-		if (magneto_sample(&mems_data, mag_samples) == 0){
-			magneto_calculate(mag_samples, MAGN_CALIB_SAMPLES, &hardiron, &softiron);
-			setMagnCoeff(hardiron, softiron);
+		if (magneto_sample(&mems_data) == 0){
 			uart_write_debug("Magnetometer Calibration: Finished!\r\n", 50);
 			osThreadResume(readMemsTaskHandle);
 			osThreadResume(printOutTaskHandle);
@@ -391,8 +400,28 @@ void magnCalibrationTask(void *argument){
 	}
 }
 
+void accCalibrationTask(void *argument){
+	mems_data_t mems_data;
+	osThreadSuspend(readMemsTaskHandle);
+	osThreadSuspend(printOutTaskHandle);
+	uart_write_debug("Accelerometer Calibration: Rotate the device multiple times on each axis\r\n", 100);
+	for(;;){
+		if (acc_sample(&mems_data) == 0){
+			uart_write_debug("Accelerometer Calibration: Finished!\r\n", 50);
+			osThreadResume(readMemsTaskHandle);
+			osThreadResume(printOutTaskHandle);
+			osThreadTerminate(accCalibrationTaskHandle);
+		}
+		osDelay(50);
+	}
+}
+
 void magnCalStart(){
 	magnCalibrationTaskHandle = osThreadNew(magnCalibrationTask, NULL, &magnCalibrationTaskHandle_attributes);
+}
+
+void accCalStart(){
+	accCalibrationTaskHandle = osThreadNew(accCalibrationTask, NULL, &accCalibrationTaskHandle_attributes);
 }
 
 //////////// SYSTEM CONFIG ///////////////////

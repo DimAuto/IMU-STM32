@@ -60,7 +60,12 @@
 #define WAKE_UP_DUR			0x5C
 
 #define GYRO_OFFSET_ADDR	0x080FB000
-#define DUMMY_WRITE_ADDR	0x080FB040
+#define MAGN_HIRON_ADDR		0x080FC000
+#define MAGN_SIRON_ADDR		0x080FD000
+#define ACC_MATRIX_ADDR		0x080FA000
+#define ACC_VECTOR_ADDR		0x080F9000
+//#define DUMMY_WRITE_ADDR	0x080FB040
+
 
 #define GYRO_CALIB_SAMPLES	700
 #define MAGN_CALIB_SAMPLES	1000
@@ -115,6 +120,6 @@ void tick_gyro(mems_data_t *mems_data);
 
 uint8_t gyro_offset_calculation(mems_data_t *mems_data);
 
-void setGyroOffset(gyro_data_t values);
+uint8_t magneto_sample(mems_data_t *mems_data);
 
 #endif /* SRC_LSM6_GYRO_H_ */

@@ -19,6 +19,9 @@ static uint8_t calcDataSize(uint8_t *data, uint8_t len);
 static void init_message_t(void);
 static void handler(UART_select device);
 
+extern osEventFlagsId_t wait_for_ack;
+
+
 extern osThreadId_t gyroCalibrationTaskHandle;
 
 uint8_t flag_connected_toIris = 0;
@@ -157,6 +160,7 @@ uint8_t transmitMessage(uint8_t *data, uint8_t data_len, uint8_t cmd, UART_selec
     }
 
     uart_write(message, msg.len, device, 10);
+    osEventFlagsSet(wait_for_ack, 0x00000001U);
     return 1;
 }
 
@@ -245,6 +249,9 @@ void handler(UART_select device){
     	break;
     case 0xC1:
     	magnCalStart();
+		break;
+    case 0xC2:
+		accCalStart();
 		break;
     default:
         break;

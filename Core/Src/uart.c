@@ -164,6 +164,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 				prvRxChar = 0x00;
 				ack_rcv_flag = 0;
 			}
+
 		}
 		else{
 			if (((rxChar == ACK) || (rxChar == NACK)) && (prvRxChar == 0xFF)){
@@ -193,6 +194,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 			  if (rxChar == 0xFF) prvRxChar = 0x00;
 			  prvRxChar = rxChar;
 			}
+
 		}
 		HAL_UART_Receive_IT(&huart4, &rxChar, 1);
 	}

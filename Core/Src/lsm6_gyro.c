@@ -12,6 +12,7 @@
 #include "helpers.h"
 #include "uart.h"
 #include "flash_memory.h"
+#include "Fusion/Fusion.h"
 
 
 // I2C object
@@ -19,10 +20,20 @@ I2C_HandleTypeDef hi2c2;
 
 static void debugPrintMEMS(mems_data_t *mems_data);
 
+float magn_samples[3*MAGN_CALIB_SAMPLES];
+float acc_samples[3*ACC_CALIB_SAMPLES];
+
+FusionVector hardiron;
+FusionMatrix softiron;
+
+FusionVector acc_offset;
+FusionMatrix acc_misalign;
+
 uint16_t gyro_offset_counter = 0;
 uint16_t magn_calib_counter = 0;
+uint16_t acc_calib_counter = 0;
 gyro_data_t gyro_sum;
-gyro_data_t gyro_mean;
+FusionVector gyro_mean;
 
 
 void tick_gyro(mems_data_t * mems_data){
@@ -197,24 +208,46 @@ uint8_t gyro_offset_calculation(mems_data_t *mems_data){
 	gyro_sum.gyro_z += mems_data->gyro.gyro_z;
 	gyro_offset_counter++;
 	if (gyro_offset_counter >= GYRO_CALIB_SAMPLES){
-		gyro_mean.gyro_x = gyro_sum.gyro_x / gyro_offset_counter;
-		gyro_mean.gyro_y = gyro_sum.gyro_y / gyro_offset_counter;
-		gyro_mean.gyro_z = gyro_sum.gyro_z / gyro_offset_counter;
+		gyro_mean.array[0] = gyro_sum.gyro_x / gyro_offset_counter;
+		gyro_mean.array[1] = gyro_sum.gyro_y / gyro_offset_counter;
+		gyro_mean.array[2] = gyro_sum.gyro_z / gyro_offset_counter;
 		setGyroOffset(gyro_mean);
 		gyro_offset_counter = 0;
-		Flash_Write_CalTable(GYRO_OFFSET_ADDR, &gyro_mean);
+		Flash_Write_Vector(GYRO_OFFSET_ADDR, &gyro_mean);
 		return 0;
 	}
 	return 1;
 }
 
-uint8_t magneto_sample(mems_data_t *mems_data, float *magn_samples){
+uint8_t magneto_sample(mems_data_t *mems_data){
 	lis3_magn_read(mems_data);
 	magn_samples[magn_calib_counter * 3 + 0] = mems_data->magn.magn_x;
 	magn_samples[magn_calib_counter * 3 + 1] = mems_data->magn.magn_y;
 	magn_samples[magn_calib_counter * 3 + 2] = mems_data->magn.magn_z;
+	magn_calib_counter++;
 	if (magn_calib_counter >= MAGN_CALIB_SAMPLES){
 		magn_calib_counter = 0;
+		magneto_calculate(magn_samples, MAGN_CALIB_SAMPLES, &hardiron, &softiron);
+		setMagnCoeff(hardiron, softiron);
+		Flash_Write_Vector(MAGN_HIRON_ADDR, &hardiron);
+		Flash_Write_Matrix(MAGN_SIRON_ADDR, &softiron);
+		return 0;
+	}
+	return 1;
+}
+
+uint8_t acc_sample(mems_data_t *mems_data){
+	lsm6_acc_read(mems_data);
+	acc_samples[acc_calib_counter * 3 + 0] = mems_data->acc.acc_x;
+	acc_samples[acc_calib_counter * 3 + 1] = mems_data->acc.acc_y;
+	acc_samples[acc_calib_counter * 3 + 2] = mems_data->acc.acc_z;
+	acc_calib_counter++;
+	if (acc_calib_counter >= ACC_CALIB_SAMPLES){
+		acc_calib_counter = 0;
+		magneto_calculate(acc_samples, ACC_CALIB_SAMPLES, &acc_offset, &acc_misalign);
+		setAccCoeff(acc_offset, acc_misalign);
+		Flash_Write_Vector(ACC_VECTOR_ADDR, &acc_offset);
+		Flash_Write_Matrix(ACC_MATRIX_ADDR, &acc_misalign);
 		return 0;
 	}
 	return 1;
