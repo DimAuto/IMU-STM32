@@ -27,6 +27,12 @@ extern "C" {
 }
 #endif
 
+void setGyroOffset(FusionVector values);
+
+void setMagnCoeff(FusionVector hardiron, FusionMatrix softiron);
+
+void setAccCoeff(FusionVector acc_offset, FusionMatrix acc_misalign);
+
 #endif
 //------------------------------------------------------------------------------
 // End of file

@@ -22,14 +22,14 @@
 const FusionMatrix gyroscopeMisalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 const FusionVector gyroscopeSensitivity = {1.0f, 1.0f, 1.0f};
 static FusionVector gyroscopeOffset = {0.0f, 0.0f, 0.0f};
-const FusionMatrix accelerometerMisalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
-const FusionVector accelerometerSensitivity = {1.0f, 1.0f, 1.0f};
-const FusionVector accelerometerOffset = {0.0f, 0.0f, 0.0f};
+static FusionMatrix accelerometerMisalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+static FusionVector accelerometerSensitivity = {1.0f, 1.0f, 1.0f};
+static FusionVector accelerometerOffset = {0.0f, 0.0f, 0.0f};
 //const FusionMatrix softIronMatrix = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 //const FusionVector hardIronOffset = {0.0f, 0.0f, 0.0f};
 
-static FusionMatrix softIronMatrix = {0.1835f, 0.0053f, -0.0027f, 0.0053f, 0.1878, -0.0007f, -0.0027f, -0.0007f, 0.1786f};
-static FusionVector hardIronOffset = {0.9485f, 0.0f, 80.0f};
+static FusionMatrix softIronMatrix = {0.0f, 0.0f, 0.0f, 0.0f, 0.0, 0.0f, 0.0f, 0.0f, 0.0f};
+static FusionVector hardIronOffset = {0.0f, 0.0f, 0.0f};
 
 static uint32_t prv_tick = 0;
 
@@ -40,27 +40,49 @@ static uint32_t update_duration = 0;
 FusionAhrs ahrs;
 FusionOffset offset;
 
-void setGyroOffset(gyro_data_t values){
-	gyroscopeOffset.array[0] = values.gyro_x;
-	gyroscopeOffset.array[1] = values.gyro_y;
-	gyroscopeOffset.array[2] = values.gyro_z;
+void setGyroOffset(FusionVector values){
+	gyroscopeOffset.array[0] = values.array[0];
+	gyroscopeOffset.array[1] = values.array[1];
+	gyroscopeOffset.array[2] = values.array[2];
 }
 
 void setMagnCoeff(FusionVector hardiron, FusionMatrix softiron){
-	for (uint8_t i=0; i<=3; i++){
+	for (uint8_t i=0; i<3; i++){
 		hardIronOffset.array[i] = hardiron.array[i];
 	}
-	for (uint8_t i=0; i<=3; i++){
-		for (uint8_t j=0; j<=3; j++){
+	for (uint8_t i=0; i<3; i++){
+		for (uint8_t j=0; j<3; j++){
 			softIronMatrix.array[i][j] = softiron.array[i][j];
 		}
 	}
+	uint8_t text[40] = {0};
+	sprintf(text, "Hardiron: %f  %f  %f\r\n,", hardIronOffset.array[0], hardIronOffset.array[1], hardIronOffset.array[2]);
+	uart_write_debug(text, 20);
+
+}
+
+void setAccCoeff(FusionVector acc_offset, FusionMatrix acc_misalign){
+	for (uint8_t i=0; i<3; i++){
+		accelerometerOffset.array[i] = acc_offset.array[i];
+	}
+	for (uint8_t i=0; i<3; i++){
+		for (uint8_t j=0; j<3; j++){
+			accelerometerMisalignment.array[i][j] = acc_misalign.array[i][j];
+		}
+	}
+	uint8_t text[40] = {0};
+	sprintf(text, "Acc-Offset: %f  %f  %f\r\n,", accelerometerOffset.array[0], accelerometerOffset.array[1], accelerometerOffset.array[2]);
+	uart_write_debug(text, 20);
 }
 
 
 /* Initialize Fusion algorithm. */
 void FusionInit(void){
-	gyro_data_t values = {0};
+	FusionVector GyroVector;
+	FusionVector HIron_vector;
+	FusionMatrix SIron_matrix;
+	FusionVector acc_vector;
+	FusionMatrix acc_matrix;
 	FusionOffsetInitialise(&offset, SAMPLE_RATE);
 	FusionAhrsInitialise(&ahrs);
 	const FusionAhrsSettings settings = {
@@ -68,13 +90,19 @@ void FusionInit(void){
 	            .gain = 0.5f,
 	            .gyroscopeRange = 500.0f,
 	            .accelerationRejection = 10.0f,
-	            .magneticRejection = 10.0f,
+	            .magneticRejection = 3.0f,
 	            .recoveryTriggerPeriod = 30 * SAMPLE_RATE,
 	    };
 	FusionAhrsSetSettings(&ahrs, &settings);
 //	if (!Flash_isWritten (GYRO_OFFSET_ADDR)){	// Check if the specific memory addr is written, in order not to cause HRDFAULT
-	Flash_Read_CalTable(GYRO_OFFSET_ADDR, &values);
-	setGyroOffset(values);
+	Flash_Read_Vector(GYRO_OFFSET_ADDR, &GyroVector);
+	setGyroOffset(GyroVector);
+	Flash_Read_Matrix(MAGN_SIRON_ADDR, &SIron_matrix);
+	Flash_Read_Vector(MAGN_HIRON_ADDR, &HIron_vector);
+	setMagnCoeff(HIron_vector, SIron_matrix);
+	Flash_Read_Matrix(ACC_MATRIX_ADDR, &acc_matrix);
+	Flash_Read_Vector(ACC_VECTOR_ADDR, &acc_vector);
+	setAccCoeff(acc_vector, acc_matrix);
 //	}
 }
 
