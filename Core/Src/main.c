@@ -221,6 +221,8 @@ int main(void)
   messageQueueHandle = osMessageQueueNew (8, RB_SIZE, &messageQueue_attributes);
   /* EVENT FLAG FOR ACK RECEIVE */
   ack_rcvd = osEventFlagsNew(NULL);
+  wait_for_ack = osEventFlagsNew(NULL);
+  magnetic_interf = osEventFlagsNew(NULL);
   //							//
 
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
@@ -318,13 +320,13 @@ void printOutTask(void *argument)
 	FusionEuler euler;
 	uint8_t text[10] = "";
 	osStatus_t status;
-	uint32_t magnetic_rej_flag;
+	uint32_t magnetic_rej_flag = 0;
 
 	for(;;)
 	{
 		status = osMessageQueueGet(outputQueueHandle, &euler, NULL, 5U);   // wait for message
 		if (status == osOK) {
-			magnetic_rej_flag = osEventFlagsWait(magnetic_interf, 0x00000001U, osFlagsWaitAny, 20);
+			magnetic_rej_flag = osEventFlagsWait(magnetic_interf, 0x00000001U, osFlagsWaitAny, 10);
 			if (magnetic_rej_flag == 1){
 				sprintf(text, "\n%f * \r", euler.angle.yaw);
 			}else{
