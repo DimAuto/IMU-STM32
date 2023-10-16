@@ -16,3 +16,4 @@ STM32L4S5VITX_RAM.ld
 .settings/
 
 .Debug/**
+Debug/
