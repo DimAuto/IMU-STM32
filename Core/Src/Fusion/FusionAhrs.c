@@ -11,6 +11,7 @@
 #include <float.h> // FLT_MAX
 #include "FusionAhrs.h"
 #include <math.h> // atan2f, cosf, powf, sinf
+#include "main.h"
 
 //------------------------------------------------------------------------------
 // Definitions
@@ -35,6 +36,8 @@ static inline FusionVector HalfMagnetic(const FusionAhrs *const ahrs);
 static inline FusionVector Feedback(const FusionVector sensor, const FusionVector reference);
 
 static inline int Clamp(const int value, const int min, const int max);
+
+extern osEventFlagsId_t magnetic_interf;
 
 //------------------------------------------------------------------------------
 // Functions
@@ -183,14 +186,17 @@ void FusionAhrsUpdate(FusionAhrs *const ahrs, const FusionVector gyroscope, cons
         if ((ahrs->initialising == true) || ((FusionVectorMagnitudeSquared(ahrs->halfMagnetometerFeedback) <= ahrs->settings.magneticRejection))) {
             ahrs->magnetometerIgnored = false;
             ahrs->magneticRecoveryTrigger -= 9;
+            osEventFlagsSet(magnetic_interf, 0x00000000U);
         } else {
             ahrs->magneticRecoveryTrigger += 1;
+            osEventFlagsSet(magnetic_interf, 0x00000001U);
         }
 
         // Don't ignore magnetometer during magnetic recovery
         if (ahrs->magneticRecoveryTrigger > ahrs->magneticRecoveryTimeout) {
             ahrs->magneticRecoveryTimeout = 0;
             ahrs->magnetometerIgnored = false;
+            osEventFlagsSet(magnetic_interf, 0x00000000U);
         } else {
             ahrs->magneticRecoveryTimeout = ahrs->settings.recoveryTriggerPeriod;
         }

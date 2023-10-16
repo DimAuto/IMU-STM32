@@ -137,6 +137,7 @@ const osMessageQueueAttr_t messageQueue_attributes = {
 // Ack receive event flag
 osEventFlagsId_t ack_rcvd;
 osEventFlagsId_t wait_for_ack;
+osEventFlagsId_t magnetic_interf;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -317,12 +318,18 @@ void printOutTask(void *argument)
 	FusionEuler euler;
 	uint8_t text[10] = "";
 	osStatus_t status;
+	uint32_t magnetic_rej_flag;
 
 	for(;;)
 	{
 		status = osMessageQueueGet(outputQueueHandle, &euler, NULL, 5U);   // wait for message
 		if (status == osOK) {
-			sprintf(text, "\n%f\r", euler.angle.yaw);
+			magnetic_rej_flag = osEventFlagsWait(magnetic_interf, 0x00000001U, osFlagsWaitAny, 20);
+			if (magnetic_rej_flag == 1){
+				sprintf(text, "\n%f * \r", euler.angle.yaw);
+			}else{
+				sprintf(text, "\n%f\r", euler.angle.yaw);
+			}
 			osMutexAcquire(debugUartMutex, osWaitForever);
 			uart_write_debug(text,50);
 			osMutexRelease(debugUartMutex);
