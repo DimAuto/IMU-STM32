@@ -9,6 +9,10 @@
 #define SRC_ELLIPSOID_FIT_H_
 
 #include "lsm6_gyro.h"
+#include "Fusion/Fusion.h"
+
+
+int magneto_calculate(float *buffer, uint32_t samples, FusionVector *hardiron, FusionMatrix *softiron);
 
 //                    Required Externally Defined Routines
 static int Lower_Triangular_Solve(double *L, double B[], double x[], int n);
