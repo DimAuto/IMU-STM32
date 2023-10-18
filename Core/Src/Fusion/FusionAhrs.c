@@ -182,8 +182,14 @@ void FusionAhrsUpdate(FusionAhrs *const ahrs, const FusionVector gyroscope, cons
         // Calculate magnetometer feedback scaled by 0.5
         ahrs->halfMagnetometerFeedback = Feedback(FusionVectorNormalise(FusionVectorCrossProduct(halfGravity, magnetometer)), halfMagnetic);
 
+        // if the system is in calibration mode, update the halfMagnetometerCalibration
+		if (ahrs->calibrating == true){
+			ahrs->halfMagnetometerCalibration = ahrs->halfMagnetometerFeedback;
+		}
+
         // Don't ignore magnetometer if magnetic error below threshold
-        if ((ahrs->initialising == true) || ((FusionVectorMagnitudeSquared(ahrs->halfMagnetometerFeedback) <= ahrs->settings.magneticRejection))) {
+//        if ((ahrs->initialising == true) || ((FusionVectorMagnitudeSquared(ahrs->halfMagnetometerFeedback) <= ahrs->settings.magneticRejection))) {
+		if ((ahrs->initialising == true) || ((FusionVectorMagnitudeSquared(ahrs->halfMagnetometerFeedback) <= FusionVectorMagnitudeSquared(ahrs->halfMagnetometerCalibration)))) {
             ahrs->magnetometerIgnored = false;
             ahrs->magneticRecoveryTrigger -= 9;
             osEventFlagsSet(magnetic_interf, 0x00000000U);

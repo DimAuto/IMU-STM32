@@ -39,11 +39,13 @@ typedef struct {
     FusionQuaternion quaternion;
     FusionVector accelerometer;
     bool initialising;
+    bool calibrating;
     float rampedGain;
     float rampedGainStep;
     bool angularRateRecovery;
     FusionVector halfAccelerometerFeedback;
     FusionVector halfMagnetometerFeedback;
+    FusionVector halfMagnetometerCalibration;
     bool accelerometerIgnored;
     int accelerationRecoveryTrigger;
     int accelerationRecoveryTimeout;

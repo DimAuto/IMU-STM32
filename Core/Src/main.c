@@ -408,7 +408,7 @@ void magnCalibrationTask(void *argument){
 			osThreadResume(readMemsTaskHandle);
 			osThreadResume(printOutTaskHandle);
 			osDelay(200);
-			osThreadTerminate(magnCalibrationTaskHandle);
+			osThreadSuspend(magnCalibrationTaskHandle);
 		}
 		osDelay(50);
 	}
