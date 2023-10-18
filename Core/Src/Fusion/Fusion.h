@@ -22,16 +22,23 @@ extern "C" {
 #include "FusionConvention.h"
 #include "FusionMath.h"
 #include "FusionOffset.h"
+#include "../lsm6_gyro.h"
 
 #ifdef __cplusplus
 }
 #endif
+
+void FusionCalcHeading(mems_data_t *memsData, FusionEuler *output_angles);
 
 void setGyroOffset(FusionVector values);
 
 void setMagnCoeff(FusionVector hardiron, FusionMatrix softiron);
 
 void setAccCoeff(FusionVector acc_offset, FusionMatrix acc_misalign);
+
+void SetMagnCalibratingFlag(bool value);
+
+void FusionReset(void);
 
 #endif
 //------------------------------------------------------------------------------

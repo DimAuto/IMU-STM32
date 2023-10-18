@@ -90,7 +90,7 @@ void FusionInit(void){
 	            .gain = 0.5f,
 	            .gyroscopeRange = 500.0f,
 	            .accelerationRejection = 10.0f,
-	            .magneticRejection = 3.0f,
+	            .magneticRejection = 5.0f,
 	            .recoveryTriggerPeriod = 30 * SAMPLE_RATE,
 	    };
 	FusionAhrsSetSettings(&ahrs, &settings);
@@ -111,7 +111,6 @@ void FusionCalcAngle(mems_data_t *memsData, FusionEuler *output_angles){
 	FusionVector gyroscope = {memsData->gyro.gyro_x, memsData->gyro.gyro_y, memsData->gyro.gyro_z};
 	const FusionVector accelerometer = {memsData->acc.acc_x, memsData->acc.acc_y, memsData->acc.acc_z};
 	gyroscope = FusionVectorSubtract(gyroscope, gyroscopeOffset);
-
 	gyroscope = FusionOffsetUpdate(&offset, gyroscope);
 #ifndef GYRO_TS
 	float delta = (float)(memsData->timestamp - prv_tick) / 1000.0f;
@@ -180,4 +179,12 @@ void FusionCalcHeading(mems_data_t *memsData, FusionEuler *output_angles){
 		output_angles->angle.pitch += 360;
 	}
 //	const FusionVector earth = FusionAhrsGetEarthAcceleration(&ahrs);
+}
+
+void SetMagnCalibratingFlag(bool value){
+	ahrs.calibrating = value;
+}
+
+void FusionReset(void){
+	FusionAhrsReset(&ahrs);
 }
