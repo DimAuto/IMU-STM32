@@ -13,12 +13,13 @@
 #include "uart.h"
 #include "flash_memory.h"
 #include "Fusion/Fusion.h"
+#include "ellipsoid_fit.h"
 
 
 // I2C object
 I2C_HandleTypeDef hi2c2;
 
-static void debugPrintMEMS(mems_data_t *mems_data);
+//static void debugPrintMEMS(mems_data_t *mems_data);
 
 float magn_samples[3*MAGN_CALIB_SAMPLES];
 float acc_samples[3*ACC_CALIB_SAMPLES];
@@ -36,12 +37,13 @@ gyro_data_t gyro_sum;
 FusionVector gyro_mean;
 
 
+extern FusionAhrs ahrs;
+
 void tick_gyro(mems_data_t * mems_data){
 
     lsm6_acc_read(mems_data);
     lis3_magn_read(mems_data);
     gyro_read(mems_data);
-//    debugPrintMEMS(mems_data);
 }
 
 
@@ -101,7 +103,8 @@ uint8_t whoIam_lis3(void){
 }
 
 HAL_StatusTypeDef gyro_init(void){
-    uint8_t ctrl2_val = 0x54;   //gyro 208Hz-500dps
+//    uint8_t ctrl2_val = 0x54;   //gyro 208Hz-500dps
+    uint8_t ctrl2_val = 0x44;   //gyro 104Hz-500dps
     uint8_t ctrl3_val = 0x04;   // block data update - reg addr auto incr
     uint8_t wakeUp = 0x10;
     uint8_t ctrl7_val = 0xE0;	//HPF and HighPerf on
@@ -220,11 +223,15 @@ uint8_t gyro_offset_calculation(mems_data_t *mems_data){
 }
 
 uint8_t magneto_sample(mems_data_t *mems_data){
+	FusionEuler angles;
+	lsm6_acc_read(mems_data);
 	lis3_magn_read(mems_data);
+	gyro_read(mems_data);
 	magn_samples[magn_calib_counter * 3 + 0] = mems_data->magn.magn_x;
 	magn_samples[magn_calib_counter * 3 + 1] = mems_data->magn.magn_y;
 	magn_samples[magn_calib_counter * 3 + 2] = mems_data->magn.magn_z;
 	magn_calib_counter++;
+	FusionCalcHeading(mems_data, &angles);
 	if (magn_calib_counter >= MAGN_CALIB_SAMPLES){
 		magn_calib_counter = 0;
 		magneto_calculate(magn_samples, MAGN_CALIB_SAMPLES, &hardiron, &softiron);
@@ -253,8 +260,8 @@ uint8_t acc_sample(mems_data_t *mems_data){
 	return 1;
 }
 
-void debugPrintMEMS(mems_data_t *mems_data){
-	uint8_t text[20] = {0};
+//void debugPrintMEMS(mems_data_t *mems_data){
+//	uint8_t text[20] = {0};
 //	uart_write("Raw:", 0, UART_NYX, 50);
 //	memcpy(text,0,20);
 //	sprintf(text, "%d\r\n,", mems_data->timestamp);
@@ -268,15 +275,15 @@ void debugPrintMEMS(mems_data_t *mems_data){
 //	sprintf(text, "%d,", mems_data->acc_z);
 //	uart_write(text, 0, UART_NYX, 50);
 //	memcpy(text,0,20);
-	sprintf(text, "%f,", mems_data->gyro.gyro_x);
-	uart_write_debug(text, 20);
-	memcpy(text,0,20);
-	sprintf(text, "%f,", mems_data->gyro.gyro_y);
-	uart_write_debug(text, 20);
-	memcpy(text,0,20);
-	sprintf(text, "%f\r\n", mems_data->gyro.gyro_z);
-	uart_write_debug(text, 20);
-	memcpy(text,0,20);
+//	sprintf(text, "%f,", mems_data->gyro.gyro_x);
+//	uart_write_debug(text, 20);
+//	memcpy(text,0,20);
+//	sprintf(text, "%f,", mems_data->gyro.gyro_y);
+//	uart_write_debug(text, 20);
+//	memcpy(text,0,20);
+//	sprintf(text, "%f\r\n", mems_data->gyro.gyro_z);
+//	uart_write_debug(text, 20);
+//	memcpy(text,0,20);
 //	sprintf(text, "%f,", mems_data->magn_x);
 //	uart_write_debug(text, 20);
 //	memcpy(text,0,20);
@@ -286,6 +293,6 @@ void debugPrintMEMS(mems_data_t *mems_data){
 //	sprintf(text, "%d\r\n", mems_data->magn_z);
 //	uart_write(text, 0, UART_NYX, 50);
 //	memcpy(text,0,20);
-}
+//}
 
 

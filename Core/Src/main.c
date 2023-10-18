@@ -398,11 +398,16 @@ void magnCalibrationTask(void *argument){
 	osThreadSuspend(readMemsTaskHandle);
 	osThreadSuspend(printOutTaskHandle);
 	uart_write_debug("Magnetometer Calibration: Rotate the device multiple times on each axis\r\n", 100);
+	SetMagnCalibratingFlag(true);
+//	FusionReset();
 	for(;;){
 		if (magneto_sample(&mems_data) == 0){
+			SetMagnCalibratingFlag(false);
 			uart_write_debug("Magnetometer Calibration: Finished!\r\n", 50);
+			osDelay(200);
 			osThreadResume(readMemsTaskHandle);
 			osThreadResume(printOutTaskHandle);
+			osDelay(200);
 			osThreadTerminate(magnCalibrationTaskHandle);
 		}
 		osDelay(50);
