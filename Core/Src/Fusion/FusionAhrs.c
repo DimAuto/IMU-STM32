@@ -189,8 +189,13 @@ void FusionAhrsUpdate(FusionAhrs *const ahrs, const FusionVector gyroscope, cons
 
 		float magnVectorLength = FusionVectorMagnitudeSquared(ahrs->halfMagnetometerFeedback);
 		if ((ahrs->initialising == false) && (ahrs->calibrating == true)){
-			magn_error_sum += magnVectorLength;
+			uint8_t text[20] = {0};
+			sprintf(text, "%f\r\n,", magnVectorLength);
+			uart_write_debug(text, 20);
 			magn_error_counter++;
+			if (magn_error_counter > 50){
+				magn_error_sum += magnVectorLength;
+			}
 			if (ahrs->calibrated == true){
 				ahrs->halfMagnetometerMean = magn_error_sum / magn_error_counter;
 				ahrs->calibrating == false;
