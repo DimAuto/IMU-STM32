@@ -223,21 +223,35 @@ uint8_t gyro_offset_calculation(mems_data_t *mems_data){
 }
 
 uint8_t magneto_sample(mems_data_t *mems_data){
-	FusionEuler angles;
-	lsm6_acc_read(mems_data);
 	lis3_magn_read(mems_data);
-	gyro_read(mems_data);
 	magn_samples[magn_calib_counter * 3 + 0] = mems_data->magn.magn_x;
 	magn_samples[magn_calib_counter * 3 + 1] = mems_data->magn.magn_y;
 	magn_samples[magn_calib_counter * 3 + 2] = mems_data->magn.magn_z;
 	magn_calib_counter++;
-	FusionCalcHeading(mems_data, &angles);
 	if (magn_calib_counter >= MAGN_CALIB_SAMPLES){
 		magn_calib_counter = 0;
 		magneto_calculate(magn_samples, MAGN_CALIB_SAMPLES, &hardiron, &softiron);
 		setMagnCoeff(hardiron, softiron);
 		Flash_Write_Vector(MAGN_HIRON_ADDR, &hardiron);
 		Flash_Write_Matrix(MAGN_SIRON_ADDR, &softiron);
+		SetMagnCalibratingFlag(true);
+		return 0;
+	}
+	return 1;
+}
+
+uint8_t magnetoSetErrorCoeff(mems_data_t *mems_data){
+	FusionEuler angles;
+	lsm6_acc_read(mems_data);
+	lis3_magn_read(mems_data);
+	gyro_read(mems_data);
+	magn_calib_counter++;
+	if (magn_calib_counter == MAGN_ERROR_COEFF_SAMPLES -1){
+		setMagnCalibratedFlag(true);
+	}
+	FusionCalcHeading(mems_data, &angles);
+	if (magn_calib_counter >= MAGN_ERROR_COEFF_SAMPLES){
+		magn_calib_counter = 0;
 		return 0;
 	}
 	return 1;

@@ -174,7 +174,7 @@ void Flash_Write_NUM (uint32_t StartSectorAddress, float Num)
 
 float Flash_Read_NUM (uint32_t StartSectorAddress)
 {
-	uint8_t buffer[8];
+	uint8_t buffer[16];
 	float value;
 
 	FlashReadData(StartSectorAddress, (uint64_t *)buffer, 1);

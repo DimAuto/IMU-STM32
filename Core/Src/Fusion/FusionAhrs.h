@@ -40,12 +40,13 @@ typedef struct {
     FusionVector accelerometer;
     bool initialising;
     bool calibrating;
+    bool calibrated;
     float rampedGain;
     float rampedGainStep;
     bool angularRateRecovery;
     FusionVector halfAccelerometerFeedback;
     FusionVector halfMagnetometerFeedback;
-    FusionVector halfMagnetometerCalibration;
+    float halfMagnetometerMean;
     bool accelerometerIgnored;
     int accelerationRecoveryTrigger;
     int accelerationRecoveryTimeout;

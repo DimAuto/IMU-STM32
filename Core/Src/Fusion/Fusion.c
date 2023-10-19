@@ -15,9 +15,12 @@
 #include "cmsis_os2.h"
 #include "../lsm6_gyro.h"
 #include "../../Inc/main.h"
+#include "../flash_memory.h"
 
 #define SAMPLE_PERIOD (0.034f)
 #define SAMPLE_RATE (100)
+
+static void SetHalfMagnVector(float value);
 
 const FusionMatrix gyroscopeMisalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 const FusionVector gyroscopeSensitivity = {1.0f, 1.0f, 1.0f};
@@ -83,6 +86,7 @@ void FusionInit(void){
 	FusionMatrix SIron_matrix;
 	FusionVector acc_vector;
 	FusionMatrix acc_matrix;
+	float magn_calib;
 	FusionOffsetInitialise(&offset, SAMPLE_RATE);
 	FusionAhrsInitialise(&ahrs);
 	const FusionAhrsSettings settings = {
@@ -92,9 +96,8 @@ void FusionInit(void){
 	            .accelerationRejection = 10.0f,
 	            .magneticRejection = 5.0f,
 	            .recoveryTriggerPeriod = 30 * SAMPLE_RATE,
-	    };
+	};
 	FusionAhrsSetSettings(&ahrs, &settings);
-//	if (!Flash_isWritten (GYRO_OFFSET_ADDR)){	// Check if the specific memory addr is written, in order not to cause HRDFAULT
 	Flash_Read_Vector(GYRO_OFFSET_ADDR, &GyroVector);
 	setGyroOffset(GyroVector);
 	Flash_Read_Matrix(MAGN_SIRON_ADDR, &SIron_matrix);
@@ -103,7 +106,8 @@ void FusionInit(void){
 	Flash_Read_Matrix(ACC_MATRIX_ADDR, &acc_matrix);
 	Flash_Read_Vector(ACC_VECTOR_ADDR, &acc_vector);
 	setAccCoeff(acc_vector, acc_matrix);
-//	}
+	magn_calib = Flash_Read_NUM(MAGN_CALIB_ADDR);
+	SetHalfMagnVector(magn_calib);
 }
 
 /* Calculate angle based only on Accelerometer and gyroscope.*/
@@ -163,7 +167,7 @@ void FusionCalcHeading(mems_data_t *memsData, FusionEuler *output_angles){
 	previousTimestamp = memsData->timestamp;
 #endif
 	// Update gyroscope AHRS algorithm
-	if ((delta >= MEMS_SR_SEC - 7) && (delta <= MEMS_SR_SEC + 7)){
+	if (((delta >= MEMS_SR_SEC - 7) && (delta <= MEMS_SR_SEC + 7)) || (ahrs.calibrating == true)){
 		FusionAhrsUpdate(&ahrs, gyroscope, accelerometer, magnetometer, delta);
 	}
 
@@ -181,10 +185,22 @@ void FusionCalcHeading(mems_data_t *memsData, FusionEuler *output_angles){
 //	const FusionVector earth = FusionAhrsGetEarthAcceleration(&ahrs);
 }
 
+static void SetHalfMagnVector(float value){
+	ahrs.halfMagnetometerMean = value;
+}
+
 void SetMagnCalibratingFlag(bool value){
 	ahrs.calibrating = value;
+	if (value == false){
+		float val = ahrs.halfMagnetometerMean;
+		Flash_Write_NUM(MAGN_CALIB_ADDR, val);
+	}
 }
 
 void FusionReset(void){
 	FusionAhrsReset(&ahrs);
+}
+
+void setMagnCalibratedFlag(bool value){
+	ahrs.calibrated = value;
 }

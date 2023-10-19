@@ -38,6 +38,8 @@ void setAccCoeff(FusionVector acc_offset, FusionMatrix acc_misalign);
 
 void SetMagnCalibratingFlag(bool value);
 
+void setMagnCalibratedFlag(bool value);
+
 void FusionReset(void);
 
 #endif

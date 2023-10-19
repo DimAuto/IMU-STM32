@@ -64,12 +64,14 @@
 #define MAGN_SIRON_ADDR		0x080FD000
 #define ACC_MATRIX_ADDR		0x080FA000
 #define ACC_VECTOR_ADDR		0x080F9000
+#define MAGN_CALIB_ADDR		0x080F8000
 //#define DUMMY_WRITE_ADDR	0x080FB040
 
 
 #define GYRO_CALIB_SAMPLES	700
-#define MAGN_CALIB_SAMPLES	1000
+#define MAGN_CALIB_SAMPLES	700
 #define ACC_CALIB_SAMPLES	200
+#define MAGN_ERROR_COEFF_SAMPLES 300
 
 
 typedef struct{
@@ -121,5 +123,7 @@ void tick_gyro(mems_data_t *mems_data);
 uint8_t gyro_offset_calculation(mems_data_t *mems_data);
 
 uint8_t magneto_sample(mems_data_t *mems_data);
+
+uint8_t magnetoSetErrorCoeff(mems_data_t *mems_data);
 
 #endif /* SRC_LSM6_GYRO_H_ */

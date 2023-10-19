@@ -39,6 +39,9 @@ static inline int Clamp(const int value, const int min, const int max);
 
 extern osEventFlagsId_t magnetic_interf;
 
+static float magn_error_sum = 0.0f;
+static uint32_t magn_error_counter = 0;
+
 //------------------------------------------------------------------------------
 // Functions
 
@@ -78,6 +81,8 @@ void FusionAhrsReset(FusionAhrs *const ahrs) {
     ahrs->magnetometerIgnored = false;
     ahrs->magneticRecoveryTrigger = 0;
     ahrs->magneticRecoveryTimeout = ahrs->settings.recoveryTriggerPeriod;
+    ahrs->calibrated = false;
+    ahrs->calibrating = false;
 }
 
 /**
@@ -182,14 +187,17 @@ void FusionAhrsUpdate(FusionAhrs *const ahrs, const FusionVector gyroscope, cons
         // Calculate magnetometer feedback scaled by 0.5
         ahrs->halfMagnetometerFeedback = Feedback(FusionVectorNormalise(FusionVectorCrossProduct(halfGravity, magnetometer)), halfMagnetic);
 
-        // if the system is in calibration mode, update the halfMagnetometerCalibration
-		if (ahrs->calibrating == true){
-			ahrs->halfMagnetometerCalibration = ahrs->halfMagnetometerFeedback;
+		float magnVectorLength = FusionVectorMagnitudeSquared(ahrs->halfMagnetometerFeedback);
+		if ((ahrs->initialising == false) && (ahrs->calibrating == true)){
+			magn_error_sum += magnVectorLength;
+			magn_error_counter++;
+			if (ahrs->calibrated == true){
+				ahrs->halfMagnetometerMean = magn_error_sum / magn_error_counter;
+				ahrs->calibrating == false;
+			}
 		}
-
         // Don't ignore magnetometer if magnetic error below threshold
-//        if ((ahrs->initialising == true) || ((FusionVectorMagnitudeSquared(ahrs->halfMagnetometerFeedback) <= ahrs->settings.magneticRejection))) {
-		if ((ahrs->initialising == true) || ((FusionVectorMagnitudeSquared(ahrs->halfMagnetometerFeedback) <= FusionVectorMagnitudeSquared(ahrs->halfMagnetometerCalibration)))) {
+        if ((ahrs->initialising == true) || (magnVectorLength <= ahrs->halfMagnetometerMean)) {
             ahrs->magnetometerIgnored = false;
             ahrs->magneticRecoveryTrigger -= 9;
             osEventFlagsSet(magnetic_interf, 0x00000000U);
@@ -201,7 +209,7 @@ void FusionAhrsUpdate(FusionAhrs *const ahrs, const FusionVector gyroscope, cons
         // Don't ignore magnetometer during magnetic recovery
         if (ahrs->magneticRecoveryTrigger > ahrs->magneticRecoveryTimeout) {
             ahrs->magneticRecoveryTimeout = 0;
-            ahrs->magnetometerIgnored = false;
+//            ahrs->magnetometerIgnored = false;
             osEventFlagsSet(magnetic_interf, 0x00000000U);
         } else {
             ahrs->magneticRecoveryTimeout = ahrs->settings.recoveryTriggerPeriod;

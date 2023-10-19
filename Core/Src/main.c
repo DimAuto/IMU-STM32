@@ -67,7 +67,7 @@ const osThreadAttr_t calcHeadingTask_attributes = {
 const osThreadAttr_t readMemsTask_attributes = {
   .name = "readMems",
   .stack_size = 128 * 8,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityHigh,
 };
 
 const osThreadAttr_t getCoorsTask_attributes = {
@@ -85,7 +85,7 @@ const osThreadAttr_t readMessageTaskHandle_attributes = {
 const osThreadAttr_t sendMessageTaskHandle_attributes = {
   .name = "sendMessage",
   .stack_size = 128 * 8,
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 
 const osThreadAttr_t gyroCalibrationTaskHandle_attributes = {
@@ -395,13 +395,18 @@ void gyroCalibrationTask(void *argument){
 
 void magnCalibrationTask(void *argument){
 	mems_data_t mems_data;
+	uint8_t mag_sample_res, err_coef_res = 1;
 	osThreadSuspend(readMemsTaskHandle);
 	osThreadSuspend(printOutTaskHandle);
 	uart_write_debug("Magnetometer Calibration: Rotate the device multiple times on each axis\r\n", 100);
-	SetMagnCalibratingFlag(true);
-//	FusionReset();
 	for(;;){
-		if (magneto_sample(&mems_data) == 0){
+		if (mag_sample_res != 0){
+			mag_sample_res = magneto_sample(&mems_data);
+		}
+		if ((err_coef_res != 0) && (mag_sample_res == 0)){
+			err_coef_res = magnetoSetErrorCoeff(&mems_data);
+		}
+		if (err_coef_res == 0){
 			SetMagnCalibratingFlag(false);
 			uart_write_debug("Magnetometer Calibration: Finished!\r\n", 50);
 			osDelay(200);
