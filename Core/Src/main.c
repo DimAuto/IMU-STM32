@@ -400,13 +400,7 @@ void magnCalibrationTask(void *argument){
 	osThreadSuspend(printOutTaskHandle);
 	uart_write_debug("Magnetometer Calibration: Rotate the device multiple times on each axis\r\n", 100);
 	for(;;){
-		if (mag_sample_res != 0){
-			mag_sample_res = magneto_sample(&mems_data);
-		}
-		if ((err_coef_res != 0) && (mag_sample_res == 0)){
-			err_coef_res = magnetoSetErrorCoeff(&mems_data);
-		}
-		if (err_coef_res == 0){
+		if (magneto_sample == 0){
 			SetMagnCalibratingFlag(false);
 			uart_write_debug("Magnetometer Calibration: Finished!\r\n", 50);
 			osDelay(200);

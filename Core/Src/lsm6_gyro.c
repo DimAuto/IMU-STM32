@@ -103,8 +103,8 @@ uint8_t whoIam_lis3(void){
 }
 
 HAL_StatusTypeDef gyro_init(void){
-//    uint8_t ctrl2_val = 0x54;   //gyro 208Hz-500dps
-    uint8_t ctrl2_val = 0x44;   //gyro 104Hz-500dps
+    uint8_t ctrl2_val = 0x54;   //gyro 208Hz-500dps
+//    uint8_t ctrl2_val = 0x44;   //gyro 104Hz-500dps
     uint8_t ctrl3_val = 0x04;   // block data update - reg addr auto incr
     uint8_t wakeUp = 0x10;
     uint8_t ctrl7_val = 0xE0;	//HPF and HighPerf on
@@ -234,7 +234,7 @@ uint8_t magneto_sample(mems_data_t *mems_data){
 		setMagnCoeff(hardiron, softiron);
 		Flash_Write_Vector(MAGN_HIRON_ADDR, &hardiron);
 		Flash_Write_Matrix(MAGN_SIRON_ADDR, &softiron);
-		SetMagnCalibratingFlag(true);
+//		SetMagnCalibratingFlag(true);
 		return 0;
 	}
 	return 1;

@@ -20,8 +20,6 @@
 #define SAMPLE_PERIOD (0.034f)
 #define SAMPLE_RATE (100)
 
-static void SetHalfMagnVector(float value);
-
 const FusionMatrix gyroscopeMisalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 const FusionVector gyroscopeSensitivity = {1.0f, 1.0f, 1.0f};
 static FusionVector gyroscopeOffset = {0.0f, 0.0f, 0.0f};
@@ -91,11 +89,11 @@ void FusionInit(void){
 	FusionAhrsInitialise(&ahrs);
 	const FusionAhrsSettings settings = {
 	            .convention = FusionConventionNwu,
-	            .gain = 0.5f,
+	            .gain = 0.2f,
 	            .gyroscopeRange = 500.0f,
 	            .accelerationRejection = 10.0f,
-	            .magneticRejection = 5.0f,
-	            .recoveryTriggerPeriod = 30 * SAMPLE_RATE,
+	            .magneticRejection = 3.0f,
+	            .recoveryTriggerPeriod = 100 * SAMPLE_RATE,
 	};
 	FusionAhrsSetSettings(&ahrs, &settings);
 	Flash_Read_Vector(GYRO_OFFSET_ADDR, &GyroVector);
@@ -106,8 +104,6 @@ void FusionInit(void){
 	Flash_Read_Matrix(ACC_MATRIX_ADDR, &acc_matrix);
 	Flash_Read_Vector(ACC_VECTOR_ADDR, &acc_vector);
 	setAccCoeff(acc_vector, acc_matrix);
-	magn_calib = Flash_Read_NUM(MAGN_CALIB_ADDR);
-	SetHalfMagnVector(magn_calib);
 }
 
 /* Calculate angle based only on Accelerometer and gyroscope.*/
@@ -153,7 +149,7 @@ void FusionCalcHeading(mems_data_t *memsData, FusionEuler *output_angles){
 
 	// Apply calibration
 	gyroscope = FusionVectorSubtract(gyroscope, gyroscopeOffset);
-//	accelerometer = FusionCalibrationInertial(accelerometer, accelerometerMisalignment, accelerometerSensitivity, accelerometerOffset);
+	accelerometer = FusionCalibrationInertial(accelerometer, accelerometerMisalignment, accelerometerSensitivity, accelerometerOffset);
 	magnetometer = FusionCalibrationMagnetic(magnetometer, softIronMatrix, hardIronOffset);
 
 	// Update gyroscope offset correction algorithm
@@ -185,16 +181,9 @@ void FusionCalcHeading(mems_data_t *memsData, FusionEuler *output_angles){
 //	const FusionVector earth = FusionAhrsGetEarthAcceleration(&ahrs);
 }
 
-static void SetHalfMagnVector(float value){
-	ahrs.halfMagnetometerMean = value;
-}
 
 void SetMagnCalibratingFlag(bool value){
 	ahrs.calibrating = value;
-	if (value == false){
-		float val = ahrs.halfMagnetometerMean;
-		Flash_Write_NUM(MAGN_CALIB_ADDR, val);
-	}
 }
 
 void FusionReset(void){

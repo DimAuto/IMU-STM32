@@ -46,7 +46,7 @@ typedef struct {
     bool angularRateRecovery;
     FusionVector halfAccelerometerFeedback;
     FusionVector halfMagnetometerFeedback;
-    float halfMagnetometerMean;
+//    float halfMagnetometerMean;
     bool accelerometerIgnored;
     int accelerationRecoveryTrigger;
     int accelerationRecoveryTimeout;

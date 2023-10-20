@@ -205,7 +205,7 @@ void Error_Handler(void);
 
 /* USER DEFINES */
 //#define GYRO_TS
-#define MEMS_SR 10
+#define MEMS_SR 5
 #define MEMS_SR_SEC (MEMS_SR / 1000)
 
 

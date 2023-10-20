@@ -177,55 +177,41 @@ void FusionAhrsUpdate(FusionAhrs *const ahrs, const FusionVector gyroscope, cons
     }
 
     // Calculate magnetometer feedback
-    FusionVector halfMagnetometerFeedback = FUSION_VECTOR_ZERO;
-    ahrs->magnetometerIgnored = true;
-    if (FusionVectorIsZero(magnetometer) == false) {
+        FusionVector halfMagnetometerFeedback = FUSION_VECTOR_ZERO;
+        ahrs->magnetometerIgnored = true;
+        if (FusionVectorIsZero(magnetometer) == false) {
 
-        // Calculate direction of magnetic field indicated by algorithm
-        const FusionVector halfMagnetic = HalfMagnetic(ahrs);
+            // Calculate direction of magnetic field indicated by algorithm
+            const FusionVector halfMagnetic = HalfMagnetic(ahrs);
 
-        // Calculate magnetometer feedback scaled by 0.5
-        ahrs->halfMagnetometerFeedback = Feedback(FusionVectorNormalise(FusionVectorCrossProduct(halfGravity, magnetometer)), halfMagnetic);
+            // Calculate magnetometer feedback scaled by 0.5
+            ahrs->halfMagnetometerFeedback = Feedback(FusionVectorNormalise(FusionVectorCrossProduct(halfGravity, magnetometer)), halfMagnetic);
 
-		float magnVectorLength = FusionVectorMagnitudeSquared(ahrs->halfMagnetometerFeedback);
-		if ((ahrs->initialising == false) && (ahrs->calibrating == true)){
-			uint8_t text[20] = {0};
-			sprintf(text, "%f\r\n,", magnVectorLength);
-			uart_write_debug(text, 20);
-			magn_error_counter++;
-			if (magn_error_counter > 50){
-				magn_error_sum += magnVectorLength;
-			}
-			if (ahrs->calibrated == true){
-				ahrs->halfMagnetometerMean = magn_error_sum / magn_error_counter;
-				ahrs->calibrating == false;
-			}
-		}
-        // Don't ignore magnetometer if magnetic error below threshold
-        if ((ahrs->initialising == true) || (magnVectorLength <= ahrs->halfMagnetometerMean)) {
-            ahrs->magnetometerIgnored = false;
-            ahrs->magneticRecoveryTrigger -= 9;
-            osEventFlagsSet(magnetic_interf, 0x00000000U);
-        } else {
-            ahrs->magneticRecoveryTrigger += 1;
-            osEventFlagsSet(magnetic_interf, 0x00000001U);
+            // Don't ignore magnetometer if magnetic error below threshold
+            if ((ahrs->initialising == true) || ((FusionVectorMagnitudeSquared(ahrs->halfMagnetometerFeedback) <= ahrs->settings.magneticRejection))) {
+                ahrs->magnetometerIgnored = false;
+                ahrs->magneticRecoveryTrigger -= 9;
+                osEventFlagsSet(magnetic_interf, 0x00000000U);
+            } else {
+                ahrs->magneticRecoveryTrigger += 1;
+                osEventFlagsSet(magnetic_interf, 0x00000001U);
+            }
+
+            // Don't ignore magnetometer during magnetic recovery
+            if (ahrs->magneticRecoveryTrigger > ahrs->magneticRecoveryTimeout) {
+                ahrs->magneticRecoveryTimeout = 0;
+                ahrs->magnetometerIgnored = false;
+                osEventFlagsSet(magnetic_interf, 0x00000000U);
+            } else {
+                ahrs->magneticRecoveryTimeout = ahrs->settings.recoveryTriggerPeriod;
+            }
+            ahrs->magneticRecoveryTrigger = Clamp(ahrs->magneticRecoveryTrigger, 0, ahrs->settings.recoveryTriggerPeriod);
+
+            // Apply magnetometer feedback
+            if (ahrs->magnetometerIgnored == false) {
+                halfMagnetometerFeedback = ahrs->halfMagnetometerFeedback;
+            }
         }
-
-        // Don't ignore magnetometer during magnetic recovery
-        if (ahrs->magneticRecoveryTrigger > ahrs->magneticRecoveryTimeout) {
-            ahrs->magneticRecoveryTimeout = 0;
-//            ahrs->magnetometerIgnored = false;
-            osEventFlagsSet(magnetic_interf, 0x00000000U);
-        } else {
-            ahrs->magneticRecoveryTimeout = ahrs->settings.recoveryTriggerPeriod;
-        }
-        ahrs->magneticRecoveryTrigger = Clamp(ahrs->magneticRecoveryTrigger, 0, ahrs->settings.recoveryTriggerPeriod);
-
-        // Apply magnetometer feedback
-        if (ahrs->magnetometerIgnored == false) {
-            halfMagnetometerFeedback = ahrs->halfMagnetometerFeedback;
-        }
-    }
 
     // Convert gyroscope to radians per second scaled by 0.5
     const FusionVector halfGyroscope = FusionVectorMultiplyScalar(gyroscope, FusionDegreesToRadians(0.5f));

@@ -293,7 +293,7 @@ uint32_t Flash_Read_Matrix (uint32_t StartSectorAddress, FusionMatrix *data)
 	uint8_t buffer[42] = {0};
 	float temp[9] = {0.0f};
 
-	FlashReadData(StartSectorAddress, (uint64_t *)buffer, 2);
+	FlashReadData(StartSectorAddress, (uint64_t *)buffer, 5);
 
 	if ((buffer[0] == 255) && (buffer[1] == 255)){
 		return 1;
