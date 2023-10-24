@@ -39,6 +39,7 @@ osThreadId_t sendMessageTaskHandle;
 osThreadId_t gyroCalibrationTaskHandle;
 osThreadId_t magnCalibrationTaskHandle;
 osThreadId_t accCalibrationTaskHandle;
+osThreadId_t checkforInterruptsTaskHandle;
 
 
 osSemaphoreId_t binSemHandle;
@@ -106,6 +107,12 @@ const osThreadAttr_t accCalibrationTaskHandle_attributes = {
   .priority = (osPriority_t) osPriorityHigh,
 };
 
+const osThreadAttr_t checkforInterruptTaskHandle_attributes = {
+  .name = "check_for_Interrupt",
+  .stack_size = 128 * 8,
+  .priority = (osPriority_t) osPriorityLow,
+};
+
 /* Definitions for myMutex01 */
 osMutexId_t debugUartMutex;
 const osMutexAttr_t uartMutex_attributes = {
@@ -138,6 +145,7 @@ const osMessageQueueAttr_t messageQueue_attributes = {
 osEventFlagsId_t ack_rcvd;
 osEventFlagsId_t wait_for_ack;
 osEventFlagsId_t magnetic_interf;
+osEventFlagsId_t magnCalibStart;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -153,6 +161,7 @@ void sendMessageTask(void *argument);
 void gyroCalibrationTask(void *argument);
 void magnCalibrationTask(void *argument);
 void accCalibrationTask(void *argument);
+void checkForInterrupt(void *argument);
 
 /**
   * @brief  The application entry point.
@@ -223,6 +232,7 @@ int main(void)
   ack_rcvd = osEventFlagsNew(NULL);
   wait_for_ack = osEventFlagsNew(NULL);
   magnetic_interf = osEventFlagsNew(NULL);
+  magnCalibStart = osEventFlagsNew(NULL);
   //							//
 
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
@@ -241,10 +251,13 @@ int main(void)
 
   gyroCalibrationTaskHandle = osThreadNew(gyroCalibrationTask, NULL, &gyroCalibrationTaskHandle_attributes);
 
-//  magnCalibrationTaskHandle = osThreadNew(magnCalibrationTask, NULL, &magnCalibrationTaskHandle_attributes);
+  magnCalibrationTaskHandle = osThreadNew(magnCalibrationTask, NULL, &magnCalibrationTaskHandle_attributes);
+
+  checkforInterruptsTaskHandle = osThreadNew(checkForInterrupt, NULL, &checkforInterruptTaskHandle_attributes);
 
   /*Suspend the gyro-calibration task*/
   osThreadSuspend(gyroCalibrationTaskHandle);
+  osThreadSuspend(magnCalibrationTaskHandle);
 
   /* Start scheduler */
   osKernelStart();
@@ -267,17 +280,26 @@ int main(void)
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
-  /* USER CODE BEGIN 5 */
-  /* Infinite loop */
-  for(;;)
-  {
-	HAL_GPIO_TogglePin(GPIOB,LED2_Pin);
-	uart_receive_it(UART_NYX);
-    osDelay(500);
-  }
-  /* USER CODE END 5 */
+//	uint32_t magneticCalibStart = 0;
+	for(;;)
+	{
+		HAL_GPIO_TogglePin(GPIOB,LED2_Pin);
+		uart_receive_it(UART_NYX);
+		osDelay(500);
+	}
+	/* USER CODE END 5 */
 }
 
+void checkForInterrupt(void *argument){
+	for(;;){
+		//Check for enabled interrupt flags
+		if (osEventFlagsWait(magnCalibStart, 0x00000001U, osFlagsWaitAny, 10) == 1){
+			osThreadResume(magnCalibrationTaskHandle);;
+			osEventFlagsSet(magnCalibStart, 0x00000000U);
+		}
+		osDelay(1000);
+	}
+}
 
 void calcHeadingTask(void *argument)
 {
@@ -337,7 +359,7 @@ void printOutTask(void *argument)
 			osMutexRelease(debugUartMutex);
 			memset(text,0,sizeof(text));
 		}
-		osDelay(70);
+		osDelay(220);
 	}
 }
 
@@ -400,7 +422,7 @@ void magnCalibrationTask(void *argument){
 	osThreadSuspend(printOutTaskHandle);
 	uart_write_debug("Magnetometer Calibration: Rotate the device multiple times on each axis\r\n", 100);
 	for(;;){
-		if (magneto_sample == 0){
+		if (magneto_sample(&mems_data) == 0){
 			SetMagnCalibratingFlag(false);
 			uart_write_debug("Magnetometer Calibration: Finished!\r\n", 50);
 			osDelay(200);
@@ -429,8 +451,9 @@ void accCalibrationTask(void *argument){
 	}
 }
 
-void magnCalStart(){
+void magnCalStart(void){
 	magnCalibrationTaskHandle = osThreadNew(magnCalibrationTask, NULL, &magnCalibrationTaskHandle_attributes);
+//	osThreadResume(magnCalibrationTaskHandle);
 }
 
 void accCalStart(){
@@ -746,3 +769,13 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
+
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    if(GPIO_Pin == GPIO_PIN_13) // If The INT Source Is EXTI Line9 (A9 Pin)
+    {
+//    	magnCalStart();
+    	osEventFlagsSet(magnCalibStart, 0x00000001U);
+    }
+}

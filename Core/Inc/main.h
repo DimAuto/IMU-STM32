@@ -209,7 +209,7 @@ void Error_Handler(void);
 #define MEMS_SR_SEC (MEMS_SR / 1000)
 
 
-void magnCalStart();
+void magnCalStart(void);
 
 
 /* USER CODE END Private defines */
