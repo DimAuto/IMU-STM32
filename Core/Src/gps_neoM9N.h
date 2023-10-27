@@ -153,7 +153,7 @@
 //#define NMEA_delimiter  0x2C
 
 typedef struct{
-    char sentence[75];
+    char sentence[100];
     char timestamp[9];
     long latitude;
     char NS[1];
@@ -187,8 +187,8 @@ typedef struct{
 }messageCFG_t;
 
 typedef enum{
-	NACK,
-	ACK,
+	UBX_NACK,
+	UBX_ACK,
 	TRANS_ERROR,
 	RECEIVE_ERROR,
 	TRANS_OK

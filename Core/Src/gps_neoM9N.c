@@ -96,53 +96,44 @@ void ublox_transmit_message(uint8_t cmd, UART_select device){
 
 UBLOX_transResult ubloxInit(void){
 	UBLOX_transResult ret;
-	uint8_t res[10] = {0};
     ret = setPortOutput(COM_PORT_I2C, COM_TYPE_NMEA);
-    if (ret != ACK){
-    	sprintf(res, " POUT:%d\r\n,", ret);
-		uart_write_debug(res, 50);
+    if (ret != UBX_ACK){
+		uart_write_debug(" POUT:%d\r\n", 50);
     }
     HAL_Delay(10);
     ret = configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GLL, NMEA_GGL_RATE, COM_PORT_I2C);
-    if (ret != ACK){
-    	sprintf(res, " GGL:%d\r\n,", ret);
-    	uart_write_debug(res, 50);
+    if (ret != UBX_ACK){
+    	uart_write_debug(" GGL:%d\r\n", 50);
     }
     HAL_Delay(10);
     ret = configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GSA, NMEA_GSA_RATE, COM_PORT_I2C);
-    if (ret != ACK){
-    	sprintf(res, " GSA:%d\r\n,", ret);
-		uart_write_debug(res, 50);
+    if (ret != UBX_ACK){
+		uart_write_debug(" GSA:%d\r\n", 50);
     }
     HAL_Delay(10);
     ret = configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GSV, NMEA_GSV_RATE, COM_PORT_I2C);
-    if (ret != ACK){
-    	sprintf(res, " GSV:%d\r\n,", ret);
-		uart_write_debug(res, 50);
+    if (ret != UBX_ACK){
+		uart_write_debug(" GSV:%d\r\n", 50);
     }
     HAL_Delay(10);
     ret = configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_RMC, NMEA_RMC_RATE, COM_PORT_I2C);
-    if (ret != ACK){
-    	sprintf(res, " RMC:%d\r\n,", ret);
-		uart_write_debug(res, 50);
+    if (ret != UBX_ACK){
+		uart_write_debug(" RMC:%d\r\n", 50);
     }
     HAL_Delay(10);
     ret = configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_VTG, NMEA_VTG_RATE, COM_PORT_I2C);
-    if (ret != ACK){
-    	sprintf(res, " VTG:%d\r\n,", ret);
-		uart_write_debug(res, 50);
+    if (ret != UBX_ACK){
+		uart_write_debug(" VTG:%d\r\n", 50);
     }
     HAL_Delay(10);
     ret = configureNMEA(UBX_CLASS_NMEA, UBX_NMEA_GGA, NMEA_GGA_RATE, COM_PORT_I2C);
-    if (ret != ACK){
-    	sprintf(res, " GGA:%d\r\n,", ret);
-		uart_write_debug(res, 50);
+    if (ret != UBX_ACK){
+		uart_write_debug(" GGA:%d\r\n", 50);
     }
     HAL_Delay(10);
     ret = powerManageCfgSet(120);
-    if (ret != ACK){
-		sprintf(res, " PM2:%d\r\n,", ret);
-		uart_write_debug(res, 50);
+    if (ret != UBX_ACK){
+		uart_write_debug(" PM2:%d\r\n", 50);
     }
 	return ret;
 }
@@ -162,15 +153,15 @@ uint8_t ubloxRead(void){
     num  = ((bytes[0] << 8) | bytes[1]);
     memset(bytes, 0, 2);
     if (num > 0){
-    	if (num>140)num=140;
+    	if (num>75)num=75;
         res = HAL_I2C_Mem_Read(&hi2c1, UBLOX_M9N, 0xFF, I2C_MEMADD_SIZE_8BIT, gps_data.sentence, num, 100);
         if ((res != HAL_OK) || (gps_data.sentence[0] != '$')){
                 return 10;
         }
-//#ifdef __DEBUG__
+#ifdef __DEBUG__
         uart_write_debug(gps_data.sentence, 50);
         uart_write_debug("\r\n", 10);
-//#endif
+#endif
         return res;
     }
     return 10;

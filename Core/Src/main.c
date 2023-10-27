@@ -140,6 +140,11 @@ const osMessageQueueAttr_t messageQueue_attributes = {
   .name = "messageQueue"
 };
 
+osMessageQueueId_t coorsQueueHandle;
+const osMessageQueueAttr_t coorsQueue_attributes = {
+  .name = "coorsQueue"
+};
+
 
 // Ack receive event flag
 osEventFlagsId_t ack_rcvd;
@@ -209,9 +214,9 @@ int main(void)
 	  uart_write_debug("Failed to Initialize ublox bus\r\n", 10);
   }
   else{
-	  HAL_StatusTypeDef res;
+	  UBLOX_transResult res;
 	  res = ubloxInit();
-	  if (res != HAL_OK){
+	  if (res != UBX_ACK){
 		  uart_write_debug("Failed to Initialize UBLOX\r\n", 10);
 	  }
 	  else{
@@ -228,6 +233,8 @@ int main(void)
   memsQueueHandle = osMessageQueueNew (8, sizeof(mems_data_t), &memsQueue_attributes);
   outputQueueHandle = osMessageQueueNew (4, sizeof(FusionEuler), &outputQueue_attributes);
   messageQueueHandle = osMessageQueueNew (8, RB_SIZE, &messageQueue_attributes);
+  coorsQueueHandle = osMessageQueueNew (8, sizeof(gps_data_t), &coorsQueue_attributes);
+
   /* EVENT FLAG FOR ACK RECEIVE */
   ack_rcvd = osEventFlagsNew(NULL);
   wait_for_ack = osEventFlagsNew(NULL);
@@ -243,7 +250,7 @@ int main(void)
 
   printOutTaskHandle = osThreadNew(printOutTask, NULL, &printOutTask_attributes);
 
-//  getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
+  getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
 
 //  sendMessageTaskHandle = osThreadNew(sendMessageTask, NULL, &sendMessageTaskHandle_attributes);
 
@@ -340,8 +347,9 @@ void printOutTask(void *argument)
 {
 	mems_data_t mems_data;
 	FusionEuler euler;
-	uint8_t text[10] = "";
-	osStatus_t status;
+	gps_data_t gps_data;
+	uint8_t text[50] = "";
+	osStatus_t status, status_gps;
 	uint32_t magnetic_rej_flag = 0;
 
 	for(;;)
@@ -350,13 +358,17 @@ void printOutTask(void *argument)
 		if (status == osOK) {
 			magnetic_rej_flag = osEventFlagsWait(magnetic_interf, 0x00000001U, osFlagsWaitAny, 10);
 			if (magnetic_rej_flag == 1){
-				sprintf(text, "\n%f * \r", euler.angle.yaw);
+				sprintf(text, "\nHEAD: %f * \r", euler.angle.yaw);
 			}else{
-				sprintf(text, "\n%f\r", euler.angle.yaw);
+				sprintf(text, "\nHEAD: %f\r", euler.angle.yaw);
 			}
-			osMutexAcquire(debugUartMutex, osWaitForever);
 			uart_write_debug(text,50);
-			osMutexRelease(debugUartMutex);
+			memset(text,0,sizeof(text));
+		}
+		status_gps = osMessageQueueGet(coorsQueueHandle, &gps_data, NULL, 5U);   // wait for gps message
+		if (status == osOK) {
+			sprintf(text, "%d %d %d\r\n", gps_data.latitude, gps_data.longtitude, gps_data.altitude);
+			uart_write_debug(text,50);
 			memset(text,0,sizeof(text));
 		}
 		osDelay(220);
@@ -365,14 +377,11 @@ void printOutTask(void *argument)
 
 
 void getCoorsTask(void *argument){
-
+	gps_data_t data;
 	for(;;)
 	{
-//		osMutexAcquire(i2cMutex, osWaitForever);
-//		osMutexAcquire(debugUartMutex, osWaitForever);
 		ublox_tick();
-//		osMutexRelease(i2cMutex);
-//		osMutexRelease(debugUartMutex);
+		osMessageQueuePut(coorsQueueHandle, &data, 0U, 0U);
 		osDelay(1700);
 	}
 }
