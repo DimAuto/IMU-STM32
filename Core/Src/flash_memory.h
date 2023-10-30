@@ -33,4 +33,8 @@ uint32_t Flash_Write_Matrix (uint32_t StartSectorAddress, FusionMatrix *data);
 
 uint32_t Flash_Read_Matrix (uint32_t StartSectorAddress, FusionMatrix *data);
 
+void Flash_Write_Double (uint32_t StartSectorAddress, double Num);
+
+double Flash_Read_Double (uint32_t StartSectorAddress);
+
 #endif /* SRC_FLASH_MEMORY_H_ */

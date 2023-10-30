@@ -11,6 +11,10 @@
 //#include "Fusion/Fusion.h"
 
 
+void float2Bytes(uint8_t * ftoa_bytes_temp,float float_variable);
+float Bytes2float(uint8_t * ftoa_bytes_temp);
+void double2Bytes(uint8_t * ftoa_bytes_temp,float float_variable);
+float Bytes2double(uint8_t * ftoa_bytes_temp);
 
 
 static uint32_t GetPage(uint32_t Address)
@@ -51,6 +55,36 @@ float Bytes2float(uint8_t * ftoa_bytes_temp)
     } thing;
 
     for (uint8_t i = 0; i < 4; i++) {
+    	thing.bytes[i] = ftoa_bytes_temp[i];
+    }
+
+   float float_variable =  thing.a;
+   return float_variable;
+}
+
+void double2Bytes(uint8_t * ftoa_bytes_temp,float float_variable)
+{
+    union {
+      float a;
+      uint8_t bytes[8];
+    } thing;
+
+    thing.a = float_variable;
+
+    for (uint8_t i = 0; i < 8; i++) {
+      ftoa_bytes_temp[i] = thing.bytes[i];
+    }
+
+}
+
+float Bytes2double(uint8_t * ftoa_bytes_temp)
+{
+    union {
+      float a;
+      uint8_t bytes[8];
+    } thing;
+
+    for (uint8_t i = 0; i < 8; i++) {
     	thing.bytes[i] = ftoa_bytes_temp[i];
     }
 
@@ -176,6 +210,26 @@ float Flash_Read_NUM (uint32_t StartSectorAddress)
 {
 	uint8_t buffer[16];
 	float value;
+
+	FlashReadData(StartSectorAddress, (uint64_t *)buffer, 1);
+	value = Bytes2float(buffer);
+	return value;
+}
+
+
+void Flash_Write_Double (uint32_t StartSectorAddress, double Num)
+{
+	uint8_t bytes_temp[8] = {0};
+	float2Bytes(bytes_temp, Num);
+
+	FlashWriteData (StartSectorAddress, (uint64_t *)bytes_temp, 1);
+}
+
+
+double Flash_Read_Double (uint32_t StartSectorAddress)
+{
+	uint8_t buffer[16];
+	double value;
 
 	FlashReadData(StartSectorAddress, (uint64_t *)buffer, 1);
 	value = Bytes2float(buffer);
