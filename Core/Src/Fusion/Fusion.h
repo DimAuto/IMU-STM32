@@ -42,6 +42,8 @@ void setMagnCalibratedFlag(bool value);
 
 void FusionReset(void);
 
+void get_magn_vector_magnitude(mems_data_t *mems_data, double *vector);
+
 #endif
 //------------------------------------------------------------------------------
 // End of file

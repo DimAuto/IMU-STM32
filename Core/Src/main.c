@@ -145,6 +145,11 @@ const osMessageQueueAttr_t coorsQueue_attributes = {
   .name = "coorsQueue"
 };
 
+osMessageQueueId_t magnVectorQueueHandle;
+const osMessageQueueAttr_t magnVectorQueue_attributes = {
+  .name = "magnVectorQueue"
+};
+
 
 // Ack receive event flag
 osEventFlagsId_t ack_rcvd;
@@ -234,6 +239,7 @@ int main(void)
   outputQueueHandle = osMessageQueueNew (4, sizeof(FusionEuler), &outputQueue_attributes);
   messageQueueHandle = osMessageQueueNew (8, RB_SIZE, &messageQueue_attributes);
   coorsQueueHandle = osMessageQueueNew (8, sizeof(gps_data_t), &coorsQueue_attributes);
+  magnVectorQueueHandle = osMessageQueueNew (8, sizeof(double), &magnVectorQueue_attributes);
 
   /* EVENT FLAG FOR ACK RECEIVE */
   ack_rcvd = osEventFlagsNew(NULL);
@@ -250,7 +256,7 @@ int main(void)
 
   printOutTaskHandle = osThreadNew(printOutTask, NULL, &printOutTask_attributes);
 
-  getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
+//  getCoorsTaskHandle = osThreadNew(getCoorsTask, NULL, &getCoorsTask_attributes);
 
 //  sendMessageTaskHandle = osThreadNew(sendMessageTask, NULL, &sendMessageTaskHandle_attributes);
 
@@ -330,12 +336,13 @@ void readMemsTask(void *argument)
 {
 	mems_data_t mems_data;
 	FusionEuler euler;
+	double magn_vector;
 	for(;;)
 	{
-//		osMutexAcquire(i2cMutex, osWaitForever);
 		tick_gyro(&mems_data);
 		FusionCalcHeading(&mems_data, &euler);
-//		osMutexRelease(i2cMutex);
+		get_magn_vector_magnitude(&mems_data, &magn_vector);
+		osMessageQueuePut(magnVectorQueueHandle, &magn_vector, 0U, 0U);
 		osMessageQueuePut(outputQueueHandle, &euler, 0U, 0U);
 		osDelay(MEMS_SR);
 	}
@@ -347,9 +354,9 @@ void printOutTask(void *argument)
 {
 	mems_data_t mems_data;
 	FusionEuler euler;
-	gps_data_t gps_data;
+	double vector;
 	uint8_t text[50] = "";
-	osStatus_t status, status_gps;
+	osStatus_t status, status2;
 	uint32_t magnetic_rej_flag = 0;
 
 	for(;;)
@@ -365,13 +372,13 @@ void printOutTask(void *argument)
 			uart_write_debug(text,50);
 			memset(text,0,sizeof(text));
 		}
-		status_gps = osMessageQueueGet(coorsQueueHandle, &gps_data, NULL, 5U);   // wait for gps message
-		if (status == osOK) {
-			sprintf(text, "%d %d %d\r\n", gps_data.latitude, gps_data.longtitude, gps_data.altitude);
+		status2 = osMessageQueueGet(magnVectorQueueHandle, &vector, NULL, 5U);   // wait for gps message
+		if (status2 == osOK) {
+			sprintf(text, "magn_Vector: %lf\r\n", vector);
 			uart_write_debug(text,50);
 			memset(text,0,sizeof(text));
 		}
-		osDelay(220);
+		osDelay(100);
 	}
 }
 

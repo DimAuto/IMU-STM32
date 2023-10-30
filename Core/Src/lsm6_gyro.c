@@ -124,6 +124,7 @@ HAL_StatusTypeDef lsm6_acc_init(void){
 HAL_StatusTypeDef magn_init(void){
 	HAL_StatusTypeDef res = HAL_OK;
 	uint8_t ctrl1_val = 0x42;
+	uint8_t ctrl2_val = 0x00; //Full scale 4gauss
     uint8_t ctrl3_val = 0x00;
     uint8_t ctrl4_val = 0x08;
     uint8_t ctrl5_val = 0x40;
@@ -234,7 +235,7 @@ uint8_t magneto_sample(mems_data_t *mems_data){
 		setMagnCoeff(hardiron, softiron);
 		Flash_Write_Vector(MAGN_HIRON_ADDR, &hardiron);
 		Flash_Write_Matrix(MAGN_SIRON_ADDR, &softiron);
-//		SetMagnCalibratingFlag(true);
+		setMagnCalibratedFlag(true);
 		return 0;
 	}
 	return 1;

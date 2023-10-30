@@ -38,6 +38,10 @@ static clock_t timestamp = 0;
 static clock_t previousTimestamp = 0;
 static uint32_t update_duration = 0;
 
+static double magn_init_length = 1;
+
+static bool magn_cal_finished = false;
+
 FusionAhrs ahrs;
 FusionOffset offset;
 
@@ -92,8 +96,8 @@ void FusionInit(void){
 	            .gain = 0.7f,
 	            .gyroscopeRange = 500.0f,
 	            .accelerationRejection = 10.0f,
-	            .magneticRejection = 0.8f,
-	            .recoveryTriggerPeriod = 50 * SAMPLE_RATE,
+	            .magneticRejection = 5.0f,
+	            .recoveryTriggerPeriod = 10 * SAMPLE_RATE,
 	};
 	FusionAhrsSetSettings(&ahrs, &settings);
 	Flash_Read_Vector(GYRO_OFFSET_ADDR, &GyroVector);
@@ -104,6 +108,7 @@ void FusionInit(void){
 	Flash_Read_Matrix(ACC_MATRIX_ADDR, &acc_matrix);
 	Flash_Read_Vector(ACC_VECTOR_ADDR, &acc_vector);
 	setAccCoeff(acc_vector, acc_matrix);
+	magn_init_length = Flash_Read_Double(MAGN_CALIB_ADDR);
 }
 
 /* Calculate angle based only on Accelerometer and gyroscope.*/
@@ -182,6 +187,30 @@ void FusionCalcHeading(mems_data_t *memsData, FusionEuler *output_angles){
 }
 
 
+void get_magn_vector_magnitude(mems_data_t *mems_data, double *vector){
+	float x = (mems_data->magn.magn_x - hardIronOffset.array[0]);
+	float y = (mems_data->magn.magn_y - hardIronOffset.array[1]);
+	float z = (mems_data->magn.magn_z - hardIronOffset.array[2]);
+	double vector_temp = (x*x+y*y+z*z);
+	if (magn_cal_finished == true){
+		static uint8_t counter = 0;
+		if (counter < 10){
+			if(counter==0){
+				magn_init_length = 0;
+			}
+			counter++;
+			magn_init_length += vector_temp;
+		}
+		else{
+			magn_init_length /= counter;
+			magn_cal_finished = false;
+			Flash_Write_Double(MAGN_CALIB_ADDR, magn_init_length);
+		}
+	}
+	*vector = vector_temp / magn_init_length;
+}
+
+
 void SetMagnCalibratingFlag(bool value){
 	ahrs.calibrating = value;
 }
@@ -191,5 +220,5 @@ void FusionReset(void){
 }
 
 void setMagnCalibratedFlag(bool value){
-	ahrs.calibrated = value;
+	magn_cal_finished = value;
 }
