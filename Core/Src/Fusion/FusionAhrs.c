@@ -87,6 +87,7 @@ void FusionAhrsReset(FusionAhrs *const ahrs) {
     ahrs->calibrating = false;
     ahrs->magnVectorLength = 0.0f;
     ahrs->magnVectorLengthInit = 1.0f;
+    ahrs->magnTransientField = 0;
 }
 
 /**
@@ -181,7 +182,12 @@ void FusionAhrsUpdate(FusionAhrs *const ahrs, const FusionVector gyroscope, cons
     	magn_length_temp = 0;
     }
 
-
+    if((ahrs->magnVectorLength <= 1.14f) && (ahrs->magnVectorLength >= 0.86f)){
+    	ahrs->magnTransientField = 0;
+    }
+    else{
+    	ahrs->magnTransientField = 1;
+    }
 
 
     // Calculate direction of gravity indicated by algorithm
@@ -230,8 +236,8 @@ void FusionAhrsUpdate(FusionAhrs *const ahrs, const FusionVector gyroscope, cons
             ahrs->halfMagnetometerFeedback = Feedback(FusionVectorNormalise(FusionVectorCrossProduct(halfGravity, magnetometer)), halfMagnetic);
 
             // Don't ignore magnetometer if magnetic error below threshold
-            if ((ahrs->initialising == true) || ((FusionVectorMagnitudeSquared(ahrs->halfMagnetometerFeedback) <= ahrs->settings.magneticRejection) &&
-            		((ahrs->magnVectorLength <= 1.05f) && (ahrs->magnVectorLength >= 0.95f)))) {
+            if ((ahrs->initialising == true) || ((FusionVectorMagnitudeSquared(ahrs->halfMagnetometerFeedback) <= ahrs->settings.magneticRejection)
+            		&& (ahrs->magnTransientField != 0))) {
                 ahrs->magnetometerIgnored = false;
                 ahrs->magneticRecoveryTrigger -= 9;
                 osEventFlagsSet(magnetic_interf, 0x00000000U);

@@ -54,6 +54,7 @@ typedef struct {
     int accelerationRecoveryTrigger;
     int accelerationRecoveryTimeout;
     bool magnetometerIgnored;
+    int magnTransientField;
     int magneticRecoveryTrigger;
     int magneticRecoveryTimeout;
 } FusionAhrs;

@@ -94,7 +94,7 @@ void FusionInit(void){
 	            .gain = 0.7f,
 	            .gyroscopeRange = 500.0f,
 	            .accelerationRejection = 10.0f,
-	            .magneticRejection = 2.0f,
+	            .magneticRejection = 3.0f,
 	            .recoveryTriggerPeriod = 20 * SAMPLE_RATE,
 	};
 	FusionAhrsSetSettings(&ahrs, &settings);
@@ -190,6 +190,9 @@ double get_magn_vector_magnitude(void)
 	return ahrs.magnVectorLength;
 }
 
+int get_magn_transient_field(void){
+	return ahrs.magnTransientField;
+}
 
 void SetMagnCalibratingFlag(bool value){
 	ahrs.calibrating = value;
