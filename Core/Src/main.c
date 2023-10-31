@@ -352,7 +352,7 @@ void printOutTask(void *argument)
 {
 	mems_data_t mems_data;
 	FusionEuler euler;
-	double vector;
+	int trans_field_flag;
 	uint8_t text[50] = "";
 	osStatus_t status, status2;
 	uint32_t magnetic_rej_flag = 0;
@@ -362,19 +362,26 @@ void printOutTask(void *argument)
 		status = osMessageQueueGet(outputQueueHandle, &euler, NULL, 5U);   // wait for message
 		if (status == osOK) {
 			magnetic_rej_flag = osEventFlagsWait(magnetic_interf, 0x00000001U, osFlagsWaitAny, 10);
+			trans_field_flag = get_magn_transient_field();
 			if (magnetic_rej_flag == 1){
-				sprintf(text, "HEAD: %f * \r\n", euler.angle.yaw);
+				if (trans_field_flag != 0){
+					sprintf(text, "HEAD: %f * #\r\n", euler.angle.yaw);
+				}
+				else{
+					sprintf(text, "HEAD: %f *\r\n", euler.angle.yaw);
+				}
 			}else{
-				sprintf(text, "HEAD: %f\r\n", euler.angle.yaw);
+				if (trans_field_flag != 0){
+					sprintf(text, "HEAD: %f #\r\n", euler.angle.yaw);
+				}
+				else{
+					sprintf(text, "HEAD: %f\r\n", euler.angle.yaw);
+				}
 			}
 			uart_write_debug(text,50);
 			memset(text,0,sizeof(text));
 		}
-//		vector = get_magn_vector_magnitude();
-//		sprintf(text, "magn: %lf\r\n", vector);
-//		uart_write_debug(text,50);
-//		memset(text,0,sizeof(text));
-		osDelay(100);
+		osDelay(140);
 	}
 }
 
