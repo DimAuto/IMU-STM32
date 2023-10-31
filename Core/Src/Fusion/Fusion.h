@@ -44,6 +44,8 @@ void FusionReset(void);
 
 double get_magn_vector_magnitude(void);
 
+int get_magn_transient_field(void);
+
 #endif
 //------------------------------------------------------------------------------
 // End of file
