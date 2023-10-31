@@ -12,6 +12,8 @@
 #include "FusionAhrs.h"
 #include <math.h> // atan2f, cosf, powf, sinf
 #include "main.h"
+#include "../flash_memory.h"
+#include "../lsm6_gyro.h"
 
 //------------------------------------------------------------------------------
 // Definitions
@@ -83,6 +85,8 @@ void FusionAhrsReset(FusionAhrs *const ahrs) {
     ahrs->magneticRecoveryTimeout = ahrs->settings.recoveryTriggerPeriod;
     ahrs->calibrated = false;
     ahrs->calibrating = false;
+    ahrs->magnVectorLength = 0.0f;
+    ahrs->magnVectorLengthInit = 1.0f;
 }
 
 /**
@@ -120,6 +124,8 @@ void FusionAhrsSetSettings(FusionAhrs *const ahrs, const FusionAhrsSettings *con
  */
 void FusionAhrsUpdate(FusionAhrs *const ahrs, const FusionVector gyroscope, const FusionVector accelerometer, const FusionVector magnetometer, const float deltaTime) {
 #define Q ahrs->quaternion.element
+	static uint8_t magn_av_counter = 0;
+	static double magn_length_temp = 0;
 
     // Store accelerometer
     ahrs->accelerometer = accelerometer;
@@ -141,6 +147,42 @@ void FusionAhrsUpdate(FusionAhrs *const ahrs, const FusionVector gyroscope, cons
             ahrs->angularRateRecovery = false;
         }
     }
+
+	double vector_temp = (magnetometer.array[0] * magnetometer.array[0] + magnetometer.array[1] * magnetometer.array[1] +
+    							magnetometer.array[2] * magnetometer.array[2]);
+
+	//save the magn vector length after the magn calibration completion.
+    if (ahrs->calibrated == true){
+    	static uint8_t counter = 0;
+		if (counter < 10){
+			if(counter==0){
+				ahrs->magnVectorLengthInit = 0;
+			}
+			counter++;
+			ahrs->magnVectorLengthInit += vector_temp;
+		}
+		else{
+			ahrs->magnVectorLengthInit /= counter;
+			ahrs->calibrated = false;
+			counter = 0;
+			Flash_Write_Double(MAGN_CALIB_ADDR, ahrs->magnVectorLengthInit);
+		}
+    }
+
+    //compute a magn length average of n samples
+    if(magn_av_counter < MAGN_LENGTH_AV_SAMPLES){
+    	magn_length_temp += vector_temp;
+    	magn_av_counter++;
+    }
+    else{
+    	magn_length_temp /= magn_av_counter;
+    	magn_av_counter = 0;
+    	ahrs->magnVectorLength = magn_length_temp / ahrs->magnVectorLengthInit;
+    	magn_length_temp = 0;
+    }
+
+
+
 
     // Calculate direction of gravity indicated by algorithm
     const FusionVector halfGravity = HalfGravity(ahrs);
@@ -188,7 +230,8 @@ void FusionAhrsUpdate(FusionAhrs *const ahrs, const FusionVector gyroscope, cons
             ahrs->halfMagnetometerFeedback = Feedback(FusionVectorNormalise(FusionVectorCrossProduct(halfGravity, magnetometer)), halfMagnetic);
 
             // Don't ignore magnetometer if magnetic error below threshold
-            if ((ahrs->initialising == true) || ((FusionVectorMagnitudeSquared(ahrs->halfMagnetometerFeedback) <= ahrs->settings.magneticRejection))) {
+            if ((ahrs->initialising == true) || ((FusionVectorMagnitudeSquared(ahrs->halfMagnetometerFeedback) <= ahrs->settings.magneticRejection) &&
+            		((ahrs->magnVectorLength <= 1.05f) && (ahrs->magnVectorLength >= 0.95f)))) {
                 ahrs->magnetometerIgnored = false;
                 ahrs->magneticRecoveryTrigger -= 9;
                 osEventFlagsSet(magnetic_interf, 0x00000000U);

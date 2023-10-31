@@ -145,10 +145,10 @@ const osMessageQueueAttr_t coorsQueue_attributes = {
   .name = "coorsQueue"
 };
 
-osMessageQueueId_t magnVectorQueueHandle;
-const osMessageQueueAttr_t magnVectorQueue_attributes = {
-  .name = "magnVectorQueue"
-};
+//osMessageQueueId_t magnVectorQueueHandle;
+//const osMessageQueueAttr_t magnVectorQueue_attributes = {
+//  .name = "magnVectorQueue"
+//};
 
 
 // Ack receive event flag
@@ -239,7 +239,7 @@ int main(void)
   outputQueueHandle = osMessageQueueNew (4, sizeof(FusionEuler), &outputQueue_attributes);
   messageQueueHandle = osMessageQueueNew (8, RB_SIZE, &messageQueue_attributes);
   coorsQueueHandle = osMessageQueueNew (8, sizeof(gps_data_t), &coorsQueue_attributes);
-  magnVectorQueueHandle = osMessageQueueNew (8, sizeof(double), &magnVectorQueue_attributes);
+//  magnVectorQueueHandle = osMessageQueueNew (8, sizeof(double), &magnVectorQueue_attributes);
 
   /* EVENT FLAG FOR ACK RECEIVE */
   ack_rcvd = osEventFlagsNew(NULL);
@@ -341,8 +341,6 @@ void readMemsTask(void *argument)
 	{
 		tick_gyro(&mems_data);
 		FusionCalcHeading(&mems_data, &euler);
-		get_magn_vector_magnitude(&mems_data, &magn_vector);
-		osMessageQueuePut(magnVectorQueueHandle, &magn_vector, 0U, 0U);
 		osMessageQueuePut(outputQueueHandle, &euler, 0U, 0U);
 		osDelay(MEMS_SR);
 	}
@@ -365,19 +363,17 @@ void printOutTask(void *argument)
 		if (status == osOK) {
 			magnetic_rej_flag = osEventFlagsWait(magnetic_interf, 0x00000001U, osFlagsWaitAny, 10);
 			if (magnetic_rej_flag == 1){
-				sprintf(text, "\nHEAD: %f * \r", euler.angle.yaw);
+				sprintf(text, "HEAD: %f * \r\n", euler.angle.yaw);
 			}else{
-				sprintf(text, "\nHEAD: %f\r", euler.angle.yaw);
+				sprintf(text, "HEAD: %f\r\n", euler.angle.yaw);
 			}
 			uart_write_debug(text,50);
 			memset(text,0,sizeof(text));
 		}
-		status2 = osMessageQueueGet(magnVectorQueueHandle, &vector, NULL, 5U);   // wait for gps message
-		if (status2 == osOK) {
-			sprintf(text, "magn_Vector: %lf\r\n", vector);
-			uart_write_debug(text,50);
-			memset(text,0,sizeof(text));
-		}
+//		vector = get_magn_vector_magnitude();
+//		sprintf(text, "magn: %lf\r\n", vector);
+//		uart_write_debug(text,50);
+//		memset(text,0,sizeof(text));
 		osDelay(100);
 	}
 }

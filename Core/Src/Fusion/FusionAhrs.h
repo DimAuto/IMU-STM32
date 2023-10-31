@@ -8,6 +8,8 @@
 #ifndef FUSION_AHRS_H
 #define FUSION_AHRS_H
 
+#define MAGN_LENGTH_AV_SAMPLES 8
+
 //------------------------------------------------------------------------------
 // Includes
 
@@ -46,7 +48,8 @@ typedef struct {
     bool angularRateRecovery;
     FusionVector halfAccelerometerFeedback;
     FusionVector halfMagnetometerFeedback;
-//    float halfMagnetometerMean;
+    double magnVectorLengthInit;
+    double magnVectorLength;
     bool accelerometerIgnored;
     int accelerationRecoveryTrigger;
     int accelerationRecoveryTimeout;
