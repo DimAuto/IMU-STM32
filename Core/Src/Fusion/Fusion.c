@@ -17,8 +17,8 @@
 #include "../../Inc/main.h"
 #include "../flash_memory.h"
 
-#define SAMPLE_PERIOD (0.034f)
-#define SAMPLE_RATE (100)
+#define SAMPLE_PERIOD (MEMS_SR_SEC)
+#define SAMPLE_RATE (1000/MEMS_SR)
 
 const FusionMatrix gyroscopeMisalignment = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 const FusionVector gyroscopeSensitivity = {1.0f, 1.0f, 1.0f};
@@ -92,7 +92,7 @@ void FusionInit(void){
 	const FusionAhrsSettings settings = {
 	            .convention = FusionConventionNwu,
 	            .gain = 0.7f,
-	            .gyroscopeRange = 500.0f,
+	            .gyroscopeRange = 2000.0f,
 	            .accelerationRejection = 10.0f,
 	            .magneticRejection = 3.0f,
 	            .recoveryTriggerPeriod = 20 * SAMPLE_RATE,
@@ -112,9 +112,17 @@ void FusionInit(void){
 /* Calculate angle based only on Accelerometer and gyroscope.*/
 void FusionCalcAngle(mems_data_t *memsData, FusionEuler *output_angles){
 	FusionVector gyroscope = {memsData->gyro.gyro_x, memsData->gyro.gyro_y, memsData->gyro.gyro_z};
-	const FusionVector accelerometer = {memsData->acc.acc_x, memsData->acc.acc_y, memsData->acc.acc_z};
-	gyroscope = FusionVectorSubtract(gyroscope, gyroscopeOffset);
+	FusionVector accelerometer = {memsData->acc.acc_x, memsData->acc.acc_y, memsData->acc.acc_z};
+
+
+	// Apply calibration
+	gyroscope = FusionCalibrationInertial(gyroscope, FUSION_IDENTITY_MATRIX , FUSION_VECTOR_ONES, gyroscopeOffset);
+//	gyroscope = FusionVectorSubtract(gyroscope, gyroscopeOffset);
+	accelerometer = FusionCalibrationInertial(accelerometer, accelerometerMisalignment, accelerometerSensitivity, accelerometerOffset);
+
+		// Update gyroscope offset correction algorithm
 	gyroscope = FusionOffsetUpdate(&offset, gyroscope);
+
 #ifndef GYRO_TS
 	float delta = (float)(memsData->timestamp - prv_tick) / 1000.0f;
 	prv_tick = memsData->timestamp;
@@ -151,7 +159,8 @@ void FusionCalcHeading(mems_data_t *memsData, FusionEuler *output_angles){
 	FusionVector magnetometer = {memsData->magn.magn_x, memsData->magn.magn_y, memsData->magn.magn_z}; // replace this with actual magnetometer data in arbitrary units
 
 	// Apply calibration
-	gyroscope = FusionVectorSubtract(gyroscope, gyroscopeOffset);
+	gyroscope = FusionCalibrationInertial(gyroscope, FUSION_IDENTITY_MATRIX , FUSION_VECTOR_ONES, gyroscopeOffset);
+//	gyroscope = FusionVectorSubtract(gyroscope, gyroscopeOffset);
 	accelerometer = FusionCalibrationInertial(accelerometer, accelerometerMisalignment, accelerometerSensitivity, accelerometerOffset);
 	magnetometer = FusionCalibrationMagnetic(magnetometer, softIronMatrix, hardIronOffset);
 

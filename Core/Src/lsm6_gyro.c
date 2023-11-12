@@ -103,19 +103,19 @@ uint8_t whoIam_lis3(void){
 }
 
 HAL_StatusTypeDef gyro_init(void){
-    uint8_t ctrl2_val = 0x54;   //gyro 208Hz-500dps
+    uint8_t ctrl2_val = 0x5C;   //gyro 208Hz-2000dps
 //    uint8_t ctrl2_val = 0x44;   //gyro 104Hz-500dps
-    uint8_t ctrl3_val = 0x04;   // block data update - reg addr auto incr
-    uint8_t wakeUp = 0x10;
-    uint8_t ctrl7_val = 0xE0;	//HPF and HighPerf on
-    HAL_I2C_Mem_Write(&hi2c2, LSM6, WAKE_UP_DUR, I2C_MEMADD_SIZE_8BIT, &wakeUp, 1, 20);
+    uint8_t ctrl3_val = 0x44;   // block data update - reg addr auto incr
+//    uint8_t wakeUp = 0x10;
+    uint8_t ctrl7_val = 0x00;	//HPF and HighPerf on
+//    HAL_I2C_Mem_Write(&hi2c2, LSM6, WAKE_UP_DUR, I2C_MEMADD_SIZE_8BIT, &wakeUp, 1, 20);
     HAL_I2C_Mem_Write(&hi2c2, LSM6, CTRL2_G, I2C_MEMADD_SIZE_8BIT, &ctrl2_val, 1, 20);
     HAL_I2C_Mem_Write(&hi2c2 , LSM6, CTRL7_G, I2C_MEMADD_SIZE_8BIT, &ctrl7_val, 1, 20);
     return HAL_I2C_Mem_Write(&hi2c2, LSM6, CTRL3_C, I2C_MEMADD_SIZE_8BIT, &ctrl3_val, 1, 20);
 }
 
 HAL_StatusTypeDef lsm6_acc_init(void){
-    uint8_t ctrl1_val = 0x50;   //acc off
+    uint8_t ctrl1_val = 0x52;   //acc off
     uint8_t ctrl10_val = 0x20; //Enable timestamp
     HAL_I2C_Mem_Write(&hi2c2, LSM6, CTRL1_XL, I2C_MEMADD_SIZE_8BIT, &ctrl1_val, 1, 20);
     return HAL_I2C_Mem_Write(&hi2c2, LSM6, CTRL10_C, I2C_MEMADD_SIZE_8BIT, &ctrl10_val, 1, 20);
@@ -159,9 +159,12 @@ HAL_StatusTypeDef gyro_read(mems_data_t *mems_data){
 #else
     mems_data->timestamp = (uint32_t) ((ts_data[2]<<16)|(ts_data[1]<<8)|(ts_data[0]));
 #endif
-    mems_data->gyro.gyro_x = - (float)(gyro_x * 0.0177f);// * -1.0f;
-    mems_data->gyro.gyro_y = - (float)(gyro_y * 0.0177);// * -1.0f;
-    mems_data->gyro.gyro_z =   (float)(gyro_z * 0.0177f);// * -1.0f;
+//    mems_data->gyro.gyro_x = - (float)(gyro_x * 0.0177f);// * -1.0f;
+//    mems_data->gyro.gyro_y = - (float)(gyro_y * 0.0177);// * -1.0f;
+//    mems_data->gyro.gyro_z =   (float)(gyro_z * 0.0177f);// * -1.0f;
+    mems_data->gyro.gyro_x = - (float)(gyro_x * 0.0702f);// * -1.0f;
+	mems_data->gyro.gyro_y = - (float)(gyro_y * 0.0702);// * -1.0f;
+	mems_data->gyro.gyro_z =   (float)(gyro_z * 0.0702f);// * -1.0f;
     return res;
 }
 

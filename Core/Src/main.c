@@ -307,7 +307,7 @@ void checkForInterrupt(void *argument){
 	for(;;){
 		//Check for enabled interrupt flags
 		if (osEventFlagsWait(magnCalibStart, 0x00000001U, osFlagsWaitAny, 10) == 1){
-			osThreadResume(magnCalibrationTaskHandle);;
+			osThreadResume(magnCalibrationTaskHandle);
 			osEventFlagsSet(magnCalibStart, 0x00000000U);
 		}
 		osDelay(1000);
@@ -325,7 +325,7 @@ void calcHeadingTask(void *argument)
 	{
 		status = osMessageQueueGet(memsQueueHandle, &mems_data, NULL, 5U);   // wait for message
 	    if (status == osOK) {
-	    	FusionCalcHeading(&mems_data, &euler);
+	    	FusionCalcAngle(&mems_data, &euler);
 	    	osMessageQueuePut(outputQueueHandle, &euler, 0U, 5U);
 	    }
 		osDelay(30);
@@ -344,7 +344,6 @@ void readMemsTask(void *argument)
 		osMessageQueuePut(outputQueueHandle, &euler, 0U, 0U);
 		osDelay(MEMS_SR);
 	}
-	osDelay(MEMS_SR);
 }
 
 
